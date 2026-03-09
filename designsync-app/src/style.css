@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* fal.ai base colors */
+    --background: 240 10% 4%;      /* #0a0a0c - deep charcoal */
+    --foreground: 0 0% 98%;        /* Soft white */
+    
+    /* Subtle depth with cards */
+    --card: 240 6% 7%;             /* #111113 - slightly lighter than bg */
+    --card-foreground: 0 0% 98%;
+    
+    /* signature fal.ai purple */
+    --primary: 255 76% 62%;        /* #8257e5 */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 4% 12%;       /* #1e1e20 */
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 4% 12%;           /* #1e1e20 */
+    --muted-foreground: 240 5% 65%; /* Soft gray */
+    
+    --accent: 240 4% 12%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Subtler borders */
+    --border: 240 4% 12%;          /* Very dark, low contrast */
+    --input: 240 4% 12%;
+    --ring: 255 76% 62%;
+  }
+
+  body {
+    @apply bg-black/95 text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Grid removed - fal.ai is clean */
+  
+  .font-mono {
+    font-family: 'DM Mono', monospace;
+  }
+}
+
+/* Card override removed for utility class consistency */

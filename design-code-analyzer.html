@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DesignSync — Design ↔ Code Gap Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #ff6a8a;
+    --accent3: #6affb8;
+    --text: #e8e8f0;
+    --text-muted: #6b6b80;
+    --text-dim: #3a3a50;
+    --red: #ff4d6a;
+    --yellow: #ffc84d;
+    --green: #4dffb0;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo .version {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(124,106,255,0.1);
+    border: 1px solid rgba(124,106,255,0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 500px;
+    line-height: 1.5;
+  }
+
+  /* ── SECTIONS ── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── FORM CARDS ── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .config-card:hover {
+    border-color: rgba(124,106,255,0.3);
+  }
+
+  .config-card.full {
+    grid-column: 1 / -1;
+  }
+
+  .config-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .icon-figma { background: rgba(255,106,138,0.15); }
+  .icon-lib { background: rgba(106,255,184,0.15); }
+  .icon-code { background: rgba(124,106,255,0.15); }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  /* ── INPUTS ── */
+  .field {
+    margin-bottom: 12px;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  input[type="text"], input[type="password"], input[type="url"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.1);
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  .hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  .hint a { color: var(--accent); text-decoration: none; }
+
+  /* ── OPTIONAL TOGGLE ── */
+  .optional-section {
+    margin-top: 12px;
+  }
+
+  .toggle-optional {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    text-align: left;
+  }
+
+  .toggle-optional:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .optional-fields {
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(124,106,255,0.04);
+    border: 1px solid rgba(124,106,255,0.1);
+    border-radius: 8px;
+    display: none;
+  }
+
+  .optional-fields.visible { display: block; }
+
+  /* ── ANALYZE BUTTON ── */
+  .analyze-wrap {
+    margin: 32px 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .btn-analyze {
+    background: linear-gradient(135deg, var(--accent), #9b6aff);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 32px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-analyze:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 30px rgba(124,106,255,0.4);
+  }
+
+  .btn-analyze:active { transform: translateY(0); }
+  .btn-analyze:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* ── PROGRESS ── */
+  #progress-section {
+    display: none;
+    margin-bottom: 32px;
+  }
+
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 6px;
+    height: 4px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 6px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-steps {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .step-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    transition: all 0.3s;
+  }
+
+  .step-pill.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124,106,255,0.1);
+  }
+
+  .step-pill.done {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(77,255,176,0.08);
+  }
+
+  .step-pill.error {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255,77,106,0.08);
+  }
+
+  /* ── REPORT ── */
+  #report-section { display: none; }
+
+  .report-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .report-title {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .report-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-export {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-export:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  /* Summary stats */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    font-family: var(--mono);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .stat-card.red .stat-number { color: var(--red); }
+  .stat-card.yellow .stat-number { color: var(--yellow); }
+  .stat-card.green .stat-number { color: var(--green); }
+  .stat-card.blue .stat-number { color: var(--accent); }
+
+  /* Issue groups */
+  .issue-group {
+    margin-bottom: 28px;
+  }
+
+  .issue-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .issue-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-red { background: rgba(255,77,106,0.15); color: var(--red); border: 1px solid rgba(255,77,106,0.2); }
+  .badge-yellow { background: rgba(255,200,77,0.15); color: var(--yellow); border: 1px solid rgba(255,200,77,0.2); }
+  .badge-blue { background: rgba(124,106,255,0.15); color: var(--accent); border: 1px solid rgba(124,106,255,0.2); }
+  .badge-green { background: rgba(77,255,176,0.15); color: var(--green); border: 1px solid rgba(77,255,176,0.2); }
+
+  .issue-group-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .issue-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Issue items */
+  .issue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .issue-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+
+  .issue-item:hover { border-color: rgba(124,106,255,0.2); }
+
+  .issue-icon {
+    font-size: 16px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .issue-body { flex: 1; min-width: 0; }
+
+  .issue-name {
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--mono);
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .issue-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .issue-meta {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .meta-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* JSON output */
+  .json-section {
+    margin-top: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .json-header {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .json-output {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #a0a0c0;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  /* Error message */
+  .error-msg {
+    background: rgba(255,77,106,0.08);
+    border: 1px solid rgba(255,77,106,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 8px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in { animation: fadeIn 0.4s ease forwards; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .pulsing { animation: pulse 1.5s infinite; }
+
+  /* Footer */
+  footer {
+    margin-top: 80px;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 10px;
+    width: fit-content;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    font-family: var(--sans);
+  }
+
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  @media (max-width: 640px) {
+    .config-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">⚡</div>
+      <h1>DesignSync</h1>
+      <span class="version">v1.0</span>
+    </div>
+    <p>Analyze gaps between Figma designs, your component library, and production codebase. Catch missing components, incompatible usage, and design drift before dev starts.</p>
+  </header>
+
+  <!-- FIGMA section -->
+  <div class="section-label">01 — Figma Design</div>
+  <div class="config-grid" style="margin-bottom:32px;">
+    <div class="config-card">
+      <div class="card-header">
+        <div class="card-icon icon-figma">🎨</div>
+        <div>
+          <div class="card-title">Figma File</div>
+          <div class="card-subtitle">design source</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>FIGMA FILE URL</label>
+        <input type="url" id="figma-url" placeholder="https://www.figma.com/file/ABC123/My-Design" />
+      </div>
+      <div class="field">
+        <label>FIGMA API TOKEN</label>
+        <input type="password" id="figma-token" placeholder="figd_xxxxxxxxxxxxxxxx" />
+        <div class="hint">Personal access token from <a href="https://www.figma.com/settings" target="_blank">figma.com/settings</a> → Account → Personal access tokens</div>
+      </div>
+      <div class="optional-section">
+        <button class="toggle-optional" onclick="toggleOptional('figma-optional')">+ Scope options (page name, frame filter)</button>
+        <div class="optional-fields" id="figma-optional">
+          <div class="field">
+            <label>PAGE NAME (optional)</label>
+            <input type="text" id="figma-page" placeholder="e.g. Dashboard, Settings (leave blank for all)" />
+          </div>
+          <div class="field">
+            <label>FRAME / SECTION NAME (optional)</label>
+            <input type="text" id="figma-frame" placeholder="e.g. Modal flows, User profile" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPONENT LIB -->
+    <div class="config-card">
+      <div class="card-header">
+        <div class="card-icon icon-lib">📦</div>
+        <div>
+          <div class="card-title">Component Library</div>
+          <div class="card-subtitle">your ui kit source</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>GITHUB REPO URL</label>
+        <input type="url" id="lib-repo" placeholder="https://github.com/org/ui-library" />
+      </div>
+      <div class="field">
+        <label>GITHUB TOKEN (for private repos)</label>
+        <input type="password" id="lib-token" placeholder="ghp_xxxxxxxxxxxxxxxx" />
+        <div class="hint">Settings → Developer settings → Personal access tokens. Needs <code>repo</code> scope for private repos.</div>
+      </div>
+      <div class="optional-section">
+        <button class="toggle-optional" onclick="toggleOptional('lib-optional')">+ Path / branch options</button>
+        <div class="optional-fields" id="lib-optional">
+          <div class="field">
+            <label>COMPONENTS PATH (optional)</label>
+            <input type="text" id="lib-path" placeholder="src/components (default: src/components)" />
+          </div>
+          <div class="field">
+            <label>BRANCH (optional)</label>
+            <input type="text" id="lib-branch" placeholder="main" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CODEBASE -->
+    <div class="config-card full">
+      <div class="card-header">
+        <div class="card-icon icon-code">💻</div>
+        <div>
+          <div class="card-title">Your App Codebase</div>
+          <div class="card-subtitle">where components are used</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>GITHUB REPO URL</label>
+          <input type="url" id="code-repo" placeholder="https://github.com/org/my-app" />
+        </div>
+        <div class="field">
+          <label>GITHUB TOKEN (for private repos)</label>
+          <input type="password" id="code-token" placeholder="ghp_xxxxxxxxxxxxxxxx (or same as above)" />
+        </div>
+        <div class="field">
+          <label>FEATURE / ROUTE PATH (optional — focus area)</label>
+          <input type="text" id="code-path" placeholder="src/views/dashboard or src/pages (leave blank for all)" />
+        </div>
+        <div class="field">
+          <label>BRANCH (optional)</label>
+          <input type="text" id="code-branch" placeholder="main" />
+        </div>
+      </div>
+      <div class="optional-section" style="margin-top:12px;">
+        <button class="toggle-optional" onclick="toggleOptional('name-map')">+ Component name mappings (if Figma names differ from code names)</button>
+        <div class="optional-fields" id="name-map">
+          <div class="hint" style="margin-bottom:8px;">Format: <code>FigmaName=CodeName</code>, one per line. e.g. <code>Modal=BaseModal</code></div>
+          <textarea id="name-mappings" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;resize:vertical;min-height:80px;" placeholder="Modal=BaseModal&#10;Button=AppButton&#10;Card=UiCard"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYZE BUTTON -->
+  <div class="analyze-wrap">
+    <button class="btn-analyze" id="btn-run" onclick="runAnalysis()">⚡ Run Analysis</button>
+    <button class="btn-secondary" id="btn-reset" onclick="resetUI()">Start Over</button>
+    <span id="analyze-note" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);">Tokens stay in your browser — never sent to any server.</span>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress-section">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-steps">
+      <div class="step-pill" id="step-figma">📐 Fetching Figma</div>
+      <div class="step-pill" id="step-lib">📦 Indexing Component Lib</div>
+      <div class="step-pill" id="step-code">💻 Scanning Codebase</div>
+      <div class="step-pill" id="step-analyze">🧠 Analyzing Gaps</div>
+      <div class="step-pill" id="step-report">📊 Generating Report</div>
+    </div>
+    <div id="progress-log" style="margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--text-muted);min-height:20px;"></div>
+  </div>
+
+  <!-- REPORT -->
+  <div id="report-section">
+    <div class="report-header">
+      <div class="report-title">Gap Report</div>
+      <div class="report-actions">
+        <button class="btn-export" onclick="exportJSON()">↓ Export JSON</button>
+        <button class="btn-export" onclick="exportHTML()">↓ Export HTML</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('issues')">Issues</button>
+      <button class="tab" onclick="switchTab('json')">JSON Output</button>
+    </div>
+
+    <div class="tab-content active" id="tab-issues">
+      <div id="issues-container"></div>
+    </div>
+
+    <div class="tab-content" id="tab-json">
+      <div class="json-section">
+        <div class="json-header">
+          <span>report.json</span>
+          <button class="btn-export" onclick="copyJSON()">Copy</button>
+        </div>
+        <div class="json-output" id="json-output"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>DesignSync — All API calls are made directly from your browser. No data is stored or transmitted to any third-party server.</footer>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────
+
+let reportData = null;
+
+function toggleOptional(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('visible');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setStep(id, state) {
+  const el = document.getElementById(id);
+  el.classList.remove('active', 'done', 'error', 'pulsing');
+  el.classList.add(state);
+  if (state === 'active') el.classList.add('pulsing');
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  if (msg) document.getElementById('progress-log').textContent = '→ ' + msg;
+}
+
+function parseFigmaFileKey(url) {
+  const match = url.match(/figma\.com\/(file|design)\/([A-Za-z0-9]+)/);
+  return match ? match[2] : null;
+}
+
+function parseGitHubRepo(url) {
+  const match = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2].replace(/\.git$/, '') };
+}
+
+function buildNameMap(text) {
+  const map = {};
+  if (!text) return map;
+  text.split('\n').forEach(line => {
+    const parts = line.split('=');
+    if (parts.length === 2) {
+      map[parts[0].trim()] = parts[1].trim();
+    }
+  });
+  return map;
+}
+
+// ─────────────────────────────────────────────
+//  FIGMA API
+// ─────────────────────────────────────────────
+
+async function fetchFigmaComponents(fileKey, token, targetPage, targetFrame) {
+  const headers = { 'X-Figma-Token': token };
+
+  // Fetch file structure
+  const resp = await fetch(`https://api.figma.com/v1/files/${fileKey}`, { headers });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`Figma API error: ${resp.status} — ${err.message || resp.statusText}`);
+  }
+  const data = await resp.json();
+
+  // Fetch component definitions for the file
+  const compResp = await fetch(`https://api.figma.com/v1/files/${fileKey}/components`, { headers });
+  const compData = compResp.ok ? await compResp.json() : { meta: { components: [] } };
+  const componentDefs = {};
+  (compData.meta?.components || []).forEach(c => {
+    componentDefs[c.key] = c.name;
+  });
+
+  const usedComponents = [];
+  const pages = data.document?.children || [];
+
+  function walkNode(node, depth) {
+    if (depth > 50) return;
+    if (node.type === 'INSTANCE') {
+      usedComponents.push({
+        instanceName: node.name,
+        componentName: componentDefs[node.componentId] || node.name,
+        componentId: node.componentId,
+        properties: node.componentProperties || {},
+        overrides: node.overrides || [],
+        boundVariables: node.boundVariables || {},
+      });
+    }
+    if (node.children) {
+      node.children.forEach(child => walkNode(child, depth + 1));
+    }
+  }
+
+  for (const page of pages) {
+    if (targetPage && !page.name.toLowerCase().includes(targetPage.toLowerCase())) continue;
+    for (const frame of (page.children || [])) {
+      if (targetFrame && !frame.name.toLowerCase().includes(targetFrame.toLowerCase())) continue;
+      walkNode(frame, 0);
+    }
+  }
+
+  return { usedComponents, pages: pages.map(p => p.name), componentDefs };
+}
+
+// ─────────────────────────────────────────────
+//  GITHUB API
+// ─────────────────────────────────────────────
+
+async function githubFetch(url, token) {
+  const headers = { 'Accept': 'application/vnd.github.v3+json' };
+  if (token) headers['Authorization'] = `token ${token}`;
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`GitHub API ${resp.status}: ${err.message || resp.statusText} — ${url}`);
+  }
+  return resp.json();
+}
+
+async function getRepoTree(owner, repo, branch, token) {
+  // Get the latest commit SHA
+  const branchData = await githubFetch(
+    `https://api.github.com/repos/${owner}/${repo}/branches/${branch || 'main'}`,
+    token
+  );
+  const sha = branchData.commit?.sha;
+  if (!sha) throw new Error('Could not find branch SHA');
+
+  const tree = await githubFetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`,
+    token
+  );
+  return tree.tree || [];
+}
+
+async function getFileContent(owner, repo, path, token) {
+  const data = await githubFetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    token
+  );
+  if (data.encoding === 'base64') {
+    return atob(data.content.replace(/\n/g, ''));
+  }
+  return data.content || '';
+}
+
+// Parse Vue SFC to extract slots and props
+function parseVueComponent(content, filename) {
+  const name = filename.replace('.vue', '').replace(/.*\//, '');
+  const slots = [];
+  const props = [];
+
+  // Find slot definitions
+  const slotRegex = /<slot\s*(?:name=["']([^"']+)["'])?/g;
+  let m;
+  while ((m = slotRegex.exec(content)) !== null) {
+    slots.push(m[1] || 'default');
+  }
+
+  // Find defineProps (Composition API)
+  const definePropsMatch = content.match(/defineProps\s*\(\s*(\{[\s\S]*?\})\s*\)/);
+  if (definePropsMatch) {
+    const propsBlock = definePropsMatch[1];
+    const propNames = [...propsBlock.matchAll(/(\w+)\s*:/g)].map(x => x[1]);
+    props.push(...propNames);
+  }
+
+  // Find props: {} (Options API)
+  const optionsPropsMatch = content.match(/props\s*:\s*(\{[\s\S]*?\})/);
+  if (optionsPropsMatch && !definePropsMatch) {
+    const propsBlock = optionsPropsMatch[1];
+    const propNames = [...propsBlock.matchAll(/(\w+)\s*:/g)].map(x => x[1]);
+    props.push(...propNames);
+  }
+
+  // Find props: [] (Options API array)
+  const arrayPropsMatch = content.match(/props\s*:\s*\[([^\]]+)\]/);
+  if (arrayPropsMatch) {
+    const propNames = [...arrayPropsMatch[1].matchAll(/['"](\w+)['"]/g)].map(x => x[1]);
+    props.push(...propNames);
+  }
+
+  return {
+    name,
+    filename,
+    slots: [...new Set(slots)],
+    props: [...new Set(props)],
+  };
+}
+
+// Parse a Vue file to find component usages
+function parseVueUsage(content, filename) {
+  const usedComponents = [];
+
+  // Find component imports
+  const importRegex = /import\s+(\w+)\s+from\s+['"][^'"]+['"]/g;
+  let m;
+  while ((m = importRegex.exec(content)) !== null) {
+    usedComponents.push(m[1]);
+  }
+
+  // Find template usage with slots
+  const componentUsages = {};
+  // Find all <ComponentName> usages
+  const tagRegex = /<([A-Z][A-Za-z]+)[^>]*>/g;
+  while ((m = tagRegex.exec(content)) !== null) {
+    const tag = m[1];
+    if (!componentUsages[tag]) componentUsages[tag] = { slots: [], props: [] };
+  }
+
+  // Find slot usage: <template #slotname> or v-slot:slotname
+  const slotTemplateRegex = /<template\s+[#v][-:]slot[s]?[:=]["']?(\w+)["']?/g;
+  while ((m = slotTemplateRegex.exec(content)) !== null) {
+    // Find which component this template is inside
+    const before = content.substring(0, m.index);
+    const componentMatch = before.match(/<([A-Z][A-Za-z]+)[^>]*>[^<]*$/);
+    if (componentMatch) {
+      const comp = componentMatch[1];
+      if (!componentUsages[comp]) componentUsages[comp] = { slots: [], props: [] };
+      componentUsages[comp].slots.push(m[1]);
+    }
+  }
+
+  return {
+    filename,
+    components: Object.keys(componentUsages).map(name => ({
+      name,
+      slots: componentUsages[name]?.slots || [],
+    })),
+  };
+}
+
+// ─────────────────────────────────────────────
+//  COMPONENT LIB INDEXER
+// ─────────────────────────────────────────────
+
+async function indexComponentLib(owner, repo, branch, token, compPath) {
+  setProgress(25, 'Fetching component library file tree...');
+  const tree = await getRepoTree(owner, repo, branch, token);
+  const basePath = compPath || 'src/components';
+  const vueFiles = tree.filter(f => f.type === 'blob' && f.path.endsWith('.vue') && f.path.startsWith(basePath));
+
+  setProgress(30, `Found ${vueFiles.length} Vue components in library`);
+
+  const components = {};
+  let done = 0;
+
+  // Process in batches to avoid rate limits
+  const batchSize = 10;
+  for (let i = 0; i < vueFiles.length; i += batchSize) {
+    const batch = vueFiles.slice(i, i + batchSize);
+    await Promise.all(batch.map(async file => {
+      try {
+        const content = await getFileContent(owner, repo, file.path, token);
+        const parsed = parseVueComponent(content, file.path);
+        components[parsed.name] = parsed;
+      } catch (e) {
+        console.warn('Could not read', file.path, e.message);
+      }
+      done++;
+    }));
+    setProgress(30 + (done / vueFiles.length) * 15, `Indexed ${done}/${vueFiles.length} lib components...`);
+  }
+
+  return components;
+}
+
+// ─────────────────────────────────────────────
+//  CODEBASE SCANNER
+// ─────────────────────────────────────────────
+
+async function scanCodebase(owner, repo, branch, token, focusPath) {
+  setProgress(47, 'Fetching codebase file tree...');
+  const tree = await getRepoTree(owner, repo, branch, token);
+  const basePath = focusPath || 'src';
+  const vueFiles = tree.filter(f => f.type === 'blob' && f.path.endsWith('.vue') && f.path.startsWith(basePath));
+
+  setProgress(50, `Found ${vueFiles.length} Vue files in codebase`);
+
+  const usages = [];
+  let done = 0;
+
+  const batchSize = 10;
+  for (let i = 0; i < vueFiles.length; i += batchSize) {
+    const batch = vueFiles.slice(i, i + batchSize);
+    await Promise.all(batch.map(async file => {
+      try {
+        const content = await getFileContent(owner, repo, file.path, token);
+        const parsed = parseVueUsage(content, file.path);
+        if (parsed.components.length > 0) usages.push(parsed);
+      } catch (e) {
+        console.warn('Could not read', file.path, e.message);
+      }
+      done++;
+    }));
+    setProgress(50 + (done / vueFiles.length) * 15, `Scanned ${done}/${vueFiles.length} codebase files...`);
+  }
+
+  return usages;
+}
+
+// ─────────────────────────────────────────────
+//  GAP ANALYZER
+// ─────────────────────────────────────────────
+
+function analyzeGaps(figmaData, libIndex, codeUsages, nameMap) {
+  const issues = {
+    missingFromLib: [],       // Figma component not in lib at all
+    incompatibleUsage: [],    // Figma/code uses slot/prop that lib doesn't have
+    missingFromDesign: [],    // Code uses component not found in Figma
+  };
+
+  const figmaCompNames = new Set();
+
+  // Normalize component names via nameMap
+  function normalize(name) {
+    return nameMap[name] || name;
+  }
+
+  // --- Check 1 & 2: Figma vs Lib ---
+  figmaData.usedComponents.forEach(inst => {
+    const normalName = normalize(inst.componentName);
+    figmaCompNames.add(normalName);
+
+    const libComp = libIndex[normalName];
+
+    if (!libComp) {
+      // Not in lib at all
+      if (!issues.missingFromLib.find(i => i.componentName === normalName)) {
+        issues.missingFromLib.push({
+          componentName: normalName,
+          figmaName: inst.componentName,
+          description: `Component "${normalName}" is used in Figma but not found in the component library.`,
+          severity: 'high',
+        });
+      }
+    } else {
+      // Exists — check slot compatibility via properties
+      // Figma component properties can hint at slot usage
+      const propKeys = Object.keys(inst.properties || {});
+      const overrideHints = (inst.overrides || []).map(o => o.id).filter(Boolean);
+
+      // Check if any property names suggest a slot that doesn't exist
+      propKeys.forEach(prop => {
+        const propLower = prop.toLowerCase();
+        if ((propLower.includes('footer') || propLower.includes('header') || propLower.includes('actions') || propLower.includes('prefix') || propLower.includes('suffix')) && !libComp.slots.includes(propLower) && !libComp.slots.includes('default')) {
+          if (!issues.incompatibleUsage.find(i => i.componentName === normalName && i.slot === propLower)) {
+            issues.incompatibleUsage.push({
+              componentName: normalName,
+              slot: propLower,
+              availableSlots: libComp.slots,
+              description: `Figma uses "${normalName}" with a "${prop}" region, but the lib component only has slots: [${libComp.slots.join(', ') || 'default'}]`,
+              severity: 'medium',
+              source: 'figma-property',
+            });
+          }
+        }
+      });
+    }
+  });
+
+  // --- Check slot usage in code vs lib ---
+  codeUsages.forEach(fileUsage => {
+    fileUsage.components.forEach(usage => {
+      const libComp = libIndex[usage.name];
+      if (!libComp) return; // already caught above or not a lib component
+
+      usage.slots.forEach(slot => {
+        if (!libComp.slots.includes(slot) && libComp.slots.length > 0) {
+          issues.incompatibleUsage.push({
+            componentName: usage.name,
+            slot,
+            availableSlots: libComp.slots,
+            description: `In "${fileUsage.filename}", <${usage.name}> uses slot "#${slot}" but the lib component only has: [${libComp.slots.join(', ')}]`,
+            severity: 'medium',
+            source: 'code',
+            file: fileUsage.filename,
+          });
+        }
+      });
+    });
+  });
+
+  // --- Check 3: Code vs Figma (missing from design) ---
+  const allCodeComponents = new Set();
+  codeUsages.forEach(f => f.components.forEach(c => allCodeComponents.add(normalize(c.name))));
+
+  allCodeComponents.forEach(compName => {
+    if (libIndex[compName] && !figmaCompNames.has(compName)) {
+      // Component exists in code AND lib but is NOT in Figma
+      // Find all files that use it
+      const files = codeUsages.filter(f => f.components.some(c => normalize(c.name) === compName)).map(f => f.filename);
+      issues.missingFromDesign.push({
+        componentName: compName,
+        description: `"${compName}" is used in ${files.length} code file(s) but not represented in Figma designs. Design may be incomplete.`,
+        severity: 'low',
+        files: files.slice(0, 3),
+      });
+    }
+  });
+
+  return issues;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER REPORT
+// ─────────────────────────────────────────────
+
+function renderReport(issues, figmaData, libIndex, codeUsages) {
+  const total = issues.missingFromLib.length + issues.incompatibleUsage.length + issues.missingFromDesign.length;
+  const libCount = Object.keys(libIndex).length;
+  const figmaCount = figmaData.usedComponents.length;
+  const codeFileCount = codeUsages.length;
+
+  // Stats
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card red"><div class="stat-number">${issues.missingFromLib.length}</div><div class="stat-label">Missing from Lib</div></div>
+    <div class="stat-card yellow"><div class="stat-number">${issues.incompatibleUsage.length}</div><div class="stat-label">Incompatible Usage</div></div>
+    <div class="stat-card blue"><div class="stat-number">${issues.missingFromDesign.length}</div><div class="stat-label">Missing from Design</div></div>
+    <div class="stat-card green"><div class="stat-number">${libCount}</div><div class="stat-label">Lib Components</div></div>
+  `;
+
+  // Issues
+  const container = document.getElementById('issues-container');
+  container.innerHTML = '';
+
+  if (total === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>No issues found! Your design and code are in sync.</p></div>`;
+  } else {
+    // Group 1 — Missing from Lib
+    if (issues.missingFromLib.length > 0) {
+      container.appendChild(renderGroup(
+        '❌ Components Missing from Library',
+        'badge-red',
+        'HIGH',
+        issues.missingFromLib.length,
+        issues.missingFromLib.map(i => ({
+          icon: '❌',
+          name: i.componentName,
+          desc: i.description,
+          meta: i.figmaName !== i.componentName ? [`figma: ${i.figmaName}`] : [],
+        }))
+      ));
+    }
+
+    // Group 2 — Incompatible Usage
+    if (issues.incompatibleUsage.length > 0) {
+      container.appendChild(renderGroup(
+        '⚠️ Incompatible Slot / Prop Usage',
+        'badge-yellow',
+        'MEDIUM',
+        issues.incompatibleUsage.length,
+        issues.incompatibleUsage.map(i => ({
+          icon: '⚠️',
+          name: i.componentName,
+          desc: i.description,
+          meta: [
+            `slot: ${i.slot}`,
+            `available: ${i.availableSlots.join(', ') || 'none'}`,
+            i.file ? `file: .../${i.file.split('/').slice(-2).join('/')}` : `source: figma`,
+          ],
+        }))
+      ));
+    }
+
+    // Group 3 — Missing from Design
+    if (issues.missingFromDesign.length > 0) {
+      container.appendChild(renderGroup(
+        '🔍 Features in Code but Missing from Design',
+        'badge-blue',
+        'REVIEW',
+        issues.missingFromDesign.length,
+        issues.missingFromDesign.map(i => ({
+          icon: '🔍',
+          name: i.componentName,
+          desc: i.description,
+          meta: (i.files || []).map(f => `.../${f.split('/').slice(-2).join('/')}`),
+        }))
+      ));
+    }
+  }
+
+  // Context info
+  container.insertAdjacentHTML('beforeend', `
+    <div style="margin-top:24px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+      <div class="section-label" style="margin-bottom:8px;">Analysis Scope</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-family:var(--mono);font-size:11px;color:var(--text-muted);">
+        <div>📐 <strong style="color:var(--text);">${figmaCount}</strong> Figma instances scanned</div>
+        <div>📦 <strong style="color:var(--text);">${libCount}</strong> lib components indexed</div>
+        <div>💻 <strong style="color:var(--text);">${codeFileCount}</strong> code files scanned</div>
+      </div>
+    </div>
+  `);
+
+  // JSON
+  const report = {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      missingFromLib: issues.missingFromLib.length,
+      incompatibleUsage: issues.incompatibleUsage.length,
+      missingFromDesign: issues.missingFromDesign.length,
+      libComponentsIndexed: libCount,
+      figmaInstancesScanned: figmaCount,
+      codeFilesScanned: codeFileCount,
+    },
+    issues,
+  };
+  reportData = report;
+  document.getElementById('json-output').textContent = JSON.stringify(report, null, 2);
+}
+
+function renderGroup(title, badgeClass, badgeLabel, count, items) {
+  const div = document.createElement('div');
+  div.className = 'issue-group animate-in';
+  div.innerHTML = `
+    <div class="issue-group-header">
+      <span class="issue-badge ${badgeClass}">${badgeLabel}</span>
+      <span class="issue-group-title">${title}</span>
+      <span class="issue-count">${count} issue${count !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="issue-list">
+      ${items.map(i => `
+        <div class="issue-item">
+          <div class="issue-icon">${i.icon}</div>
+          <div class="issue-body">
+            <div class="issue-name">${i.name}</div>
+            <div class="issue-desc">${i.desc}</div>
+            ${i.meta && i.meta.length > 0 ? `<div class="issue-meta">${i.meta.map(m => `<span class="meta-tag">${m}</span>`).join('')}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  return div;
+}
+
+// ─────────────────────────────────────────────
+//  MAIN FLOW
+// ─────────────────────────────────────────────
+
+async function runAnalysis() {
+  const figmaUrl = document.getElementById('figma-url').value.trim();
+  const figmaToken = document.getElementById('figma-token').value.trim();
+  const libRepo = document.getElementById('lib-repo').value.trim();
+  const libToken = document.getElementById('lib-token').value.trim();
+  const codeRepo = document.getElementById('code-repo').value.trim();
+  const codeToken = document.getElementById('code-token').value.trim() || libToken;
+  const figmaPage = document.getElementById('figma-page').value.trim();
+  const figmaFrame = document.getElementById('figma-frame').value.trim();
+  const libPath = document.getElementById('lib-path').value.trim();
+  const libBranch = document.getElementById('lib-branch').value.trim();
+  const codePath = document.getElementById('code-path').value.trim();
+  const codeBranch = document.getElementById('code-branch').value.trim();
+  const nameMappings = document.getElementById('name-mappings').value.trim();
+
+  // Validation
+  if (!figmaUrl || !figmaToken) return showError('Please provide Figma URL and API token.');
+  if (!libRepo) return showError('Please provide the component library GitHub repo URL.');
+  if (!codeRepo) return showError('Please provide your app codebase GitHub repo URL.');
+
+  const figmaKey = parseFigmaFileKey(figmaUrl);
+  if (!figmaKey) return showError('Could not parse Figma file key from URL. Make sure it\'s a valid Figma file URL.');
+
+  const libGH = parseGitHubRepo(libRepo);
+  if (!libGH) return showError('Could not parse component lib GitHub URL.');
+
+  const codeGH = parseGitHubRepo(codeRepo);
+  if (!codeGH) return showError('Could not parse codebase GitHub URL.');
+
+  const nameMap = buildNameMap(nameMappings);
+
+  // Show progress UI
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('progress-section').style.display = 'block';
+  document.getElementById('report-section').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'inline-block';
+
+  try {
+    // Step 1: Figma
+    setStep('step-figma', 'active');
+    setProgress(5, 'Connecting to Figma API...');
+    const figmaData = await fetchFigmaComponents(figmaKey, figmaToken, figmaPage, figmaFrame);
+    setProgress(20, `Found ${figmaData.usedComponents.length} component instances in Figma`);
+    setStep('step-figma', 'done');
+
+    // Step 2: Lib
+    setStep('step-lib', 'active');
+    const libIndex = await indexComponentLib(libGH.owner, libGH.repo, libBranch, libToken, libPath);
+    setProgress(45, `Indexed ${Object.keys(libIndex).length} components from library`);
+    setStep('step-lib', 'done');
+
+    // Step 3: Codebase
+    setStep('step-code', 'active');
+    const codeUsages = await scanCodebase(codeGH.owner, codeGH.repo, codeBranch, codeToken, codePath);
+    setProgress(65, `Scanned ${codeUsages.length} files from codebase`);
+    setStep('step-code', 'done');
+
+    // Step 4: Analyze
+    setStep('step-analyze', 'active');
+    setProgress(75, 'Running gap analysis...');
+    await new Promise(r => setTimeout(r, 400)); // visual pause
+    const issues = analyzeGaps(figmaData, libIndex, codeUsages, nameMap);
+    setProgress(90, 'Building report...');
+    setStep('step-analyze', 'done');
+
+    // Step 5: Report
+    setStep('step-report', 'active');
+    await new Promise(r => setTimeout(r, 300));
+    renderReport(issues, figmaData, libIndex, codeUsages);
+    setProgress(100, 'Done!');
+    setStep('step-report', 'done');
+
+    document.getElementById('report-section').style.display = 'block';
+    document.getElementById('report-section').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    console.error(err);
+    const currentActive = document.querySelector('.step-pill.pulsing');
+    if (currentActive) currentActive.classList.replace('active', 'error');
+    document.getElementById('progress-log').innerHTML = `<div class="error-msg">❌ ${err.message}</div>`;
+    document.getElementById('btn-run').disabled = false;
+  }
+}
+
+function showError(msg) {
+  alert('⚠️ ' + msg);
+}
+
+function resetUI() {
+  document.getElementById('btn-run').disabled = false;
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('report-section').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'none';
+  document.querySelectorAll('.step-pill').forEach(el => {
+    el.classList.remove('active', 'done', 'error', 'pulsing');
+  });
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-log').textContent = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function exportJSON() {
+  if (!reportData) return;
+  const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `designsync-report-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+
+function exportHTML() {
+  const html = document.getElementById('tab-issues').innerHTML;
+  const statsHtml = document.getElementById('stats-row').outerHTML;
+  const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DesignSync Report</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;background:#0a0a0f;color:#e8e8f0;}
+  .stat-card{display:inline-block;background:#111118;border:1px solid #2a2a3a;border-radius:10px;padding:16px;margin:4px;text-align:center;}
+  .stat-number{font-size:28px;font-weight:700;}.stat-label{font-size:11px;color:#6b6b80;}
+  .stat-card.red .stat-number{color:#ff4d6a;}.stat-card.yellow .stat-number{color:#ffc84d;}.stat-card.blue .stat-number{color:#7c6aff;}.stat-card.green .stat-number{color:#4dffb0;}
+  .issue-item{background:#111118;border:1px solid #2a2a3a;border-radius:8px;padding:14px;margin-bottom:8px;display:flex;gap:14px;}
+  .issue-name{font-weight:600;font-family:monospace;}.issue-desc{font-size:12px;color:#6b6b80;margin-top:4px;}
+  .meta-tag{font-family:monospace;font-size:10px;padding:2px 8px;border-radius:4px;background:#1a1a24;border:1px solid #2a2a3a;color:#6b6b80;display:inline-block;margin:2px;}
+  .issue-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-family:monospace;}
+  .badge-red{background:rgba(255,77,106,.15);color:#ff4d6a;border:1px solid rgba(255,77,106,.2);}
+  .badge-yellow{background:rgba(255,200,77,.15);color:#ffc84d;border:1px solid rgba(255,200,77,.2);}
+  .badge-blue{background:rgba(124,106,255,.15);color:#7c6aff;border:1px solid rgba(124,106,255,.2);}
+  .issue-group-header{display:flex;align-items:center;gap:10px;border-bottom:1px solid #2a2a3a;padding-bottom:10px;margin-bottom:12px;margin-top:24px;}
+  .issue-group-title{font-size:14px;font-weight:700;}.issue-count{margin-left:auto;font-family:monospace;font-size:11px;color:#6b6b80;}
+  .stats-row{margin-bottom:24px;}</style></head>
+  <body><h1 style="font-size:24px;margin-bottom:8px;">DesignSync Gap Report</h1>
+  <p style="color:#6b6b80;font-family:monospace;font-size:12px;margin-bottom:24px;">Generated: ${new Date().toISOString()}</p>
+  <div class="stats-row">${statsHtml}</div>${html}</body></html>`;
+  const blob = new Blob([full], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `designsync-report-${new Date().toISOString().split('T')[0]}.html`;
+  a.click();
+}
+
+function copyJSON() {
+  if (!reportData) return;
+  navigator.clipboard.writeText(JSON.stringify(reportData, null, 2));
+  const btn = event.target;
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+</script>
+</body>
+</html>
