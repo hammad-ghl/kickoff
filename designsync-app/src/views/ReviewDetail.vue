@@ -270,7 +270,7 @@
         </div>
 
         <!-- Right: Component Checks -->
-        <div class="w-1/3 flex flex-col border border-border bg-card overflow-hidden">
+        <div class="w-1/3 flex flex-col border border-border bg-card overflow-hidden relative">
           <div class="p-3 border-b border-border flex-shrink-0">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/60">Components</h3>
@@ -314,7 +314,14 @@
             </div>
           </div>
           <div class="flex-1 overflow-y-auto">
-            <div v-if="review.componentChecks.length === 0 && !isAnalyzing" class="text-center py-8 text-sm text-muted-foreground">
+            <div v-if="review.componentChecks.length === 0 && review.analysisPhase === 'mapping_components'" class="text-center py-8 text-sm text-muted-foreground">
+              <div class="flex flex-col items-center justify-center gap-2">
+                <div class="w-6 h-6 border-2 border-muted-foreground/30 border-t-primary animate-spin rounded-full"></div>
+                <span>Mapping components...</span>
+              </div>
+            </div>
+
+            <div v-else-if="review.componentChecks.length === 0 && !isAnalyzing" class="text-center py-8 text-sm text-muted-foreground">
               <p>Component analysis will appear after AI analysis.</p>
             </div>
 
@@ -351,6 +358,18 @@
               <div v-if="filteredComponentChecks.length === 0" class="p-4 text-center text-xs text-muted-foreground">
                 No {{ componentFilter === 'ok' ? 'fully matched' : componentFilter === 'partial' ? 'partial match' : componentFilter === 'issue' ? 'issue' : '' }} components
               </div>
+            </div>
+          </div>
+
+          <!-- Loading overlay when mapping components -->
+          <div 
+            v-if="review.analysisPhase === 'mapping_components'"
+            class="absolute inset-0 bg-card/70 backdrop-blur-[1px] flex items-center justify-center z-10"
+          >
+            <div class="text-center p-4 bg-card border border-border shadow-lg">
+              <div class="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full mx-auto mb-2"></div>
+              <span class="text-sm text-foreground font-medium">Mapping components...</span>
+              <p class="text-xs text-muted-foreground mt-1">Analyzing design against library</p>
             </div>
           </div>
         </div>

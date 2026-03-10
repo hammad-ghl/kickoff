@@ -10,11 +10,15 @@ import {
 import type { IComponentDef } from '../models/UILibrary';
 import type { IComponentCheck } from '../models/Review';
 
+function normalizeComponentName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, '');
+}
+
 function deduplicateComponentChecks(checks: IComponentCheck[]): IComponentCheck[] {
   const componentMap = new Map<string, IComponentCheck>();
 
   for (const check of checks) {
-    const key = check.componentName.toLowerCase();
+    const key = normalizeComponentName(check.componentName);
     const existing = componentMap.get(key);
 
     if (!existing) {

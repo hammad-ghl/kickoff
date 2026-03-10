@@ -347,9 +347,9 @@ Remember: Each component type should appear EXACTLY ONCE in the output. Analyze 
   }
 
   const rawChecks: IComponentCheck[] = (parsed.componentChecks || []).map((c: any) => ({
-    componentName: String(c.componentName ?? ''),
-    exists: Boolean(c.exists !== false),
-    hasIssue: Boolean(c.hasIssue),
+    componentName: String(c.componentName ?? '').trim(),
+    exists: Boolean(c.exists === true),
+    hasIssue: Boolean(c.hasIssue === true),
     issueDescription: c.issueDescription ? String(c.issueDescription) : undefined,
     propsUsed: Array.isArray(c.propsUsed) ? c.propsUsed.map(String) : undefined,
     propsMissing: Array.isArray(c.propsMissing) ? c.propsMissing.map(String) : undefined,
@@ -357,16 +357,24 @@ Remember: Each component type should appear EXACTLY ONCE in the output. Analyze 
     slotsMissing: Array.isArray(c.slotsMissing) ? c.slotsMissing.map(String) : undefined,
   }));
 
+  console.log(`[Component Analysis] Raw: ${rawChecks.length} components, Names: ${rawChecks.map(c => c.componentName).join(', ')}`);
+  
   const componentChecks = deduplicateComponentChecks(rawChecks);
+  
+  console.log(`[Component Analysis] After dedup: ${componentChecks.length} components`);
 
   return { componentChecks };
+}
+
+function normalizeComponentName(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, '');
 }
 
 function deduplicateComponentChecks(checks: IComponentCheck[]): IComponentCheck[] {
   const componentMap = new Map<string, IComponentCheck>();
 
   for (const check of checks) {
-    const key = check.componentName.toLowerCase();
+    const key = normalizeComponentName(check.componentName);
     const existing = componentMap.get(key);
 
     if (!existing) {
