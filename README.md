@@ -1,331 +1,446 @@
-# DesignSync
+# DesignSync Backend
 
-**AI-Powered Design-to-Code Verification Platform**
+> **AI-Powered Design-to-Code Verification Engine**  
+> Express + TypeScript + MongoDB + Gemini 2.5 Flash
 
-> Catch design implementation gaps before they reach development. DesignSync uses AI vision to verify that designs match your component library and cover all expected use cases.
-
-[![Theme: Quality Enhancement](https://img.shields.io/badge/Theme-Quality%20Enhancement-blue)](#)
-[![AI: Gemini 2.5 Flash](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-orange)](#)
-[![Stack: Vue + Express + MongoDB](https://img.shields.io/badge/Stack-Vue%20%2B%20Express%20%2B%20MongoDB-green)](#)
+[![Built for Dev Nitro 2026](https://img.shields.io/badge/Dev%20Nitro-2026-blue)]() [![Quality Enhancement](https://img.shields.io/badge/Theme-Quality%20Enhancement-green)]()
 
 ---
 
-## 🎯 The Problem
+## 🎯 What This Does
 
-### Design-to-Development Handoff is Broken
+The backend powers DesignSync's AI-driven analysis pipeline that catches design implementation gaps before they reach development.
 
-Every sprint, we face the same issues:
+### Key Capabilities
 
-| Pain Point | Impact | Frequency |
-|------------|--------|-----------|
-| **Missing edge cases in designs** | Developers discover gaps mid-sprint, causing delays | Every feature |
-| **Component mismatches** | Designs use components that don't exist or miss required props/slots | 40%+ of reviews |
-| **No systematic validation** | Manual reviews are inconsistent and time-consuming | 2-4 hours per feature |
-| **Late-stage rework** | Issues found in code review or QA instead of design review | 30% of PRs |
-
-**Business Impact:**
-- ⏱️ **8-12 hours wasted per feature** on back-and-forth between design and dev
-- 🔄 **30% of design iterations** happen after development starts
-- 🐛 **Design debt accumulates** because systematic reviews are too slow
-
----
-
-## 💡 The Solution
-
-DesignSync automates design verification using AI vision analysis:
-
+```mermaid
+graph LR
+    A[Design Images] --> B[Gemini Vision AI]
+    C[PRD Document] --> B
+    D[Component Library] --> B
+    B --> E[Gap Analysis]
+    E --> F[Case Coverage Report]
+    E --> G[Component Matching]
+    E --> H[Issue Detection]
+    
+    style B fill:#9333ea
+    style E fill:#3b82f6
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DesignSync Flow                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   ┌──────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐  │
-│   │   PRD    │────▶│  AI Extracts │────▶│   Expected   │────▶│  Design  │  │
-│   │ Document │     │  Test Cases  │     │    Cases     │     │  Review  │  │
-│   └──────────┘     └──────────────┘     └──────────────┘     └──────────┘  │
-│                                                                     │       │
-│   ┌──────────┐                                                     ▼       │
-│   │  GitHub  │────▶ Index Components ────▶┌──────────────────────────────┐ │
-│   │   Repo   │     (props, slots,         │     AI Vision Analysis       │ │
-│   └──────────┘      variants)             │  ┌────────────────────────┐  │ │
-│                                           │  │ • Case Coverage Check  │  │ │
-│   ┌──────────┐                            │  │ • Component Mapping    │  │ │
-│   │  Design  │────▶ Upload Screenshots ──▶│  │ • Gap Detection        │  │ │
-│   │  Images  │                            │  └────────────────────────┘  │ │
-│   └──────────┘                            └──────────────────────────────┘ │
-│                                                          │                  │
-│                                                          ▼                  │
-│                                           ┌──────────────────────────────┐  │
-│                                           │      Actionable Report       │  │
-│                                           │  • Missing cases (red)       │  │
-│                                           │  • Partial coverage (yellow) │  │
-│                                           │  • Component gaps (warnings) │  │
-│                                           └──────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ✨ Key Features
-
-### 1. 📋 PRD → Test Case Generation
-Upload your PRD and AI extracts all expected user flows, edge cases, and states:
-
-- **Critical flows** (must-have for MVP)
-- **Important cases** (significantly impacts UX)
-- **Nice-to-have** (can be deprioritized)
-
-### 2. 📦 Component Library Indexing
-Connect your GitHub repo and automatically index your component library:
-
-- Extracts **props**, **slots**, **variants**
-- Supports **Vue**, **React**, **Svelte**, **Angular**
-- OAuth integration for private repos
-- One-click re-sync when library updates
-
-### 3. 🔍 AI-Powered Design Analysis
-Upload design screenshots and get instant verification:
-
-| Check | What It Does |
-|-------|--------------|
-| **Case Coverage** | Verifies each expected case is represented in designs |
-| **Component Mapping** | Identifies which library components are used |
-| **Gap Detection** | Flags missing props, slots, or non-existent components |
-
-### 4. 📊 Actionable Reports
-Clear, filterable results with visual indicators:
-
-- ✅ **Covered** - Case/component is fully represented
-- ⚠️ **Partial** - Some aspects missing (with specific details)
-- ❌ **Missing** - Not found in designs
 
 ---
 
 ## 🏗️ Architecture
 
+```mermaid
+flowchart TB
+    subgraph Client["Frontend (Vue 3)"]
+        UI[User Interface]
+    end
+    
+    subgraph API["Express REST API"]
+        Routes[Routes]
+        Controllers[Controllers]
+        Middleware[Auth & CORS]
+    end
+    
+    subgraph Services["Business Logic"]
+        Auth[GitHub OAuth]
+        GitHubAPI[GitHub API Client]
+        GeminiService[Gemini Analyzer]
+        Parser[Vue Parser]
+    end
+    
+    subgraph Storage["Data Layer"]
+        MongoDB[(MongoDB)]
+        Models[Mongoose Models]
+    end
+    
+    subgraph External["External APIs"]
+        Gemini[Gemini 2.5 Flash]
+        GitHub[GitHub API]
+    end
+    
+    UI --> Routes
+    Routes --> Controllers
+    Controllers --> Auth
+    Controllers --> GeminiService
+    Controllers --> GitHubAPI
+    
+    Auth --> GitHub
+    GitHubAPI --> GitHub
+    GeminiService --> Gemini
+    
+    Controllers --> Models
+    Models --> MongoDB
+    
+    GeminiService --> Parser
+    
+    style GeminiService fill:#9333ea
+    style MongoDB fill:#47a248
+    style Gemini fill:#ff6f00
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              System Architecture                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         Frontend (Vue 3 + TypeScript)                │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │   │
-│  │  │ Projects│ │UI Libs  │ │ Reviews │ │ Reports │ │  Auth   │        │   │
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘        │   │
-│  │                          Tailwind CSS + Vue Router                   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                      │                                      │
-│                                      ▼                                      │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      Backend (Express + TypeScript)                  │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │   │
-│  │  │   REST API  │  │   Services  │  │   Models    │                  │   │
-│  │  │  /projects  │  │  - GitHub   │  │  - Project  │                  │   │
-│  │  │  /reviews   │  │  - Gemini   │  │  - Review   │                  │   │
-│  │  │  /libraries │  │  - Parser   │  │  - UILib    │                  │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                          │                    │                             │
-│                          ▼                    ▼                             │
-│  ┌───────────────────────────┐    ┌───────────────────────────┐            │
-│  │     Gemini 2.5 Flash      │    │         MongoDB           │            │
-│  │  • Vision Analysis        │    │  • Projects & Reviews     │            │
-│  │  • Case Generation        │    │  • Component Index        │            │
-│  │  • Component Matching     │    │  • Analysis Results       │            │
-│  └───────────────────────────┘    └───────────────────────────┘            │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Tech Stack
-
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Frontend** | Vue 3, TypeScript, Tailwind | Modern, type-safe, rapid UI development |
-| **Backend** | Express, TypeScript | Lightweight, flexible REST API |
-| **Database** | MongoDB | Schema flexibility for evolving data models |
-| **AI** | Gemini 2.5 Flash | Best-in-class vision + fast response times |
-| **Auth** | GitHub OAuth | Seamless access to private repos |
 
 ---
 
-## 📈 Impact & Metrics
+## 📊 Data Flow
 
-### Time Savings
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant A as API Server
+    participant G as Gemini AI
+    participant DB as MongoDB
+    participant GH as GitHub API
 
-| Activity | Before | After | Savings |
-|----------|--------|-------|---------|
-| Manual design review | 2-4 hours | 5-10 minutes | **90%+** |
-| Finding component mismatches | 30+ minutes | Instant | **100%** |
-| Identifying missing cases | Often missed | Automated | **∞** |
-
-### Quality Improvements
-
-- **Earlier detection**: Catch issues in design phase, not code review
-- **Systematic coverage**: No more "we forgot the empty state" moments
-- **Component alignment**: Ensure designs use what actually exists in code
-
-### ROI Calculation
-
-For a team doing **10 features/month**:
-- **Before**: 10 × 4 hours = 40 hours of manual review
-- **After**: 10 × 10 minutes = ~2 hours
-- **Monthly savings**: 38 engineering hours = **~₹1.5L/month** in productivity
+    F->>A: Create Project + Review
+    A->>DB: Save project config
+    
+    F->>A: Trigger Analysis
+    A->>A: Queue background job
+    A-->>F: 202 Accepted
+    
+    par Parallel Analysis
+        A->>G: Generate test cases from PRD
+        G-->>A: Expected cases
+        A->>DB: Update project.expectedCases
+        
+        A->>GH: Index component library
+        GH-->>A: Component definitions
+        A->>DB: Save to UILibrary
+    end
+    
+    A->>G: Check case coverage (images)
+    G-->>A: Coverage results
+    A->>DB: Update review.caseChecks
+    
+    A->>G: Map components (images + library)
+    G-->>A: Component matches
+    A->>DB: Update review.componentChecks
+    
+    A->>DB: Mark analysis complete
+    
+    loop Polling
+        F->>A: GET /reviews/:id
+        A-->>F: Updated review data
+    end
+```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
-- MongoDB
-- GitHub OAuth App (for private repos)
+- MongoDB (local or Atlas)
 - Gemini API Key
+- GitHub OAuth App
 
-### Quick Start
+### Installation
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd design-code-analyzer
-
-# Backend setup
-cd designsync-server
-cp .env.example .env
-# Add your MONGODB_URI, GEMINI_API_KEY, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+# Install dependencies
 npm install
-npm run dev
 
-# Frontend setup (new terminal)
-cd designsync-app
+# Configure environment
 cp .env.example .env
-# Add VITE_API_URL=http://localhost:3000
-npm install
+# Edit .env with your credentials
+
+# Start development server
 npm run dev
 ```
 
 ### Environment Variables
 
-**Backend (`designsync-server/.env`):**
-```env
+```bash
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/designsync
-GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_gemini_key_here
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 FRONTEND_URL=http://localhost:5173
 ```
 
-**Frontend (`designsync-app/.env`):**
-```env
-VITE_API_URL=http://localhost:3000
+---
+
+## 📡 API Reference
+
+### Projects
+
+```mermaid
+graph LR
+    A[POST /api/projects] --> B[Create Project]
+    C[GET /api/projects] --> D[List Projects]
+    E[GET /api/projects/:id] --> F[Get Project]
+    G[PUT /api/projects/:id] --> H[Update Config]
+    I[DELETE /api/projects/:id] --> J[Delete + Cascade]
+    
+    style B fill:#22c55e
+    style D fill:#3b82f6
+    style F fill:#3b82f6
+    style H fill:#f59e0b
+    style J fill:#ef4444
+```
+
+### Reviews (Design Analysis)
+
+```mermaid
+graph LR
+    A[POST /api/projects/:id/analyze] --> B[Trigger Analysis]
+    C[GET /api/reviews/:id] --> D[Get Results]
+    E[PUT /api/reviews/:id] --> F[Update Review]
+    G[DELETE /api/reviews/:id] --> H[Delete Review]
+    
+    B --> I[Background Job]
+    I --> J[Phase 1: Generate Cases]
+    J --> K[Phase 2: Check Coverage]
+    K --> L[Phase 3: Map Components]
+    
+    style B fill:#9333ea
+    style I fill:#9333ea
+    style J fill:#3b82f6
+    style K fill:#3b82f6
+    style L fill:#3b82f6
+```
+
+### UI Libraries
+
+```mermaid
+graph LR
+    A[POST /api/ui-libraries] --> B[Index Repository]
+    B --> C[GitHub OAuth]
+    C --> D[Clone/Parse]
+    D --> E[Extract Components]
+    E --> F[Save to DB]
+    
+    G[GET /api/ui-libraries] --> H[List Libraries]
+    I[GET /api/ui-libraries/:id] --> J[Get Components]
+    
+    style B fill:#22c55e
+    style E fill:#9333ea
 ```
 
 ---
 
-## 🎮 Usage Demo
+## 🧠 AI Analysis Pipeline
 
-### Step 1: Create a Project
-```
-Project: "Post Scheduler Revamp"
-PRD: [Paste your PRD text]
-→ AI generates 36 expected cases
-```
+### Phase 1: Case Generation
 
-### Step 2: Link UI Library
-```
-GitHub: highrise-ui/components (private)
-→ OAuth login
-→ 184 components indexed with props/slots
-```
-
-### Step 3: Create Design Review
-```
-Upload: Dashboard screenshot (Figma export)
-→ AI analyzes in 3 steps:
-   1. Generate cases from image
-   2. Check coverage against expected cases
-   3. Map to component library
+```mermaid
+flowchart LR
+    A[PRD Text] --> B{Has PRD?}
+    B -->|Yes| C[Extract from PRD]
+    B -->|No| D[Generate from Design]
+    
+    C --> E[Gemini Analysis]
+    D --> E
+    
+    E --> F[Expected Cases]
+    F --> G[(Save to Project)]
+    
+    style E fill:#ff6f00
+    style G fill:#47a248
 ```
 
-### Step 4: Review Results
-```
-Case Coverage: 17/36 covered (47%)
-├── ✅ View Post List - COVERED
-├── ⚠️ Delete Post - PARTIAL (no confirmation modal)
-└── ❌ Empty State - MISSING
+### Phase 2: Coverage Check
 
-Components: 12/17 matched
-├── ✅ Button - exists
-├── ⚠️ Input - missing slots: edit-actions, suffix
-└── ❌ BulkActions - not in library
+```mermaid
+flowchart LR
+    A[Design Images] --> B[Gemini Vision]
+    C[Expected Cases] --> B
+    
+    B --> D{For each case}
+    D --> E[Covered?]
+    D --> F[Partial?]
+    D --> G[Missing?]
+    
+    E --> H[(Update Review)]
+    F --> H
+    G --> H
+    
+    style B fill:#ff6f00
+    style H fill:#47a248
+```
+
+### Phase 3: Component Mapping
+
+```mermaid
+flowchart LR
+    A[Design Images] --> B[Gemini Vision]
+    C[UI Library Components] --> B
+    
+    B --> D{Identify Components}
+    D --> E[Exists in Library?]
+    
+    E -->|Yes| F{All Props/Slots?}
+    E -->|No| G[Flag as Missing]
+    
+    F -->|Yes| H[✓ Full Match]
+    F -->|No| I[⚠ Partial Match]
+    
+    H --> J[(Update Review)]
+    I --> J
+    G --> J
+    
+    style B fill:#ff6f00
+    style H fill:#22c55e
+    style I fill:#f59e0b
+    style G fill:#ef4444
 ```
 
 ---
 
-## 🔮 Production Roadmap
+## 🗄️ Database Schema
 
-### Phase 1: MVP (Current)
-- [x] PRD → Case generation
-- [x] Component library indexing
-- [x] AI design analysis
-- [x] Coverage reports
-
-### Phase 2: Integration
-- [ ] Figma plugin for direct uploads
-- [ ] Slack notifications for review results
-- [ ] JIRA integration for tracking
-
-### Phase 3: Scale
-- [ ] Multi-project dashboards
-- [ ] Historical trend analysis
-- [ ] Team collaboration features
+```mermaid
+erDiagram
+    Project ||--o{ Review : has
+    Project ||--o{ UILibrary : uses
+    
+    Project {
+        ObjectId _id
+        string name
+        string description
+        Object config
+        Array expectedCases
+        Date createdAt
+    }
+    
+    Review {
+        ObjectId _id
+        ObjectId projectId
+        string title
+        Array designImages
+        string analysisPhase
+        Array caseChecks
+        Array componentChecks
+        Date createdAt
+    }
+    
+    UILibrary {
+        ObjectId _id
+        string name
+        Object repository
+        Array components
+        Date indexedAt
+    }
+```
 
 ---
 
-## ⚠️ Risk Assessment
+## 🛠️ Tech Stack
 
-| Risk | Mitigation |
-|------|------------|
-| AI accuracy varies | Human review for critical decisions; AI as assistant not replacement |
-| API rate limits | Caching, batch processing, queuing for large libraries |
-| Private repo security | OAuth scopes limited; no credentials stored |
-| Design image size | Client-side compression before upload |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Runtime** | Node.js 18+ | JavaScript runtime |
+| **Framework** | Express.js | REST API server |
+| **Language** | TypeScript | Type safety |
+| **Database** | MongoDB + Mongoose | Data persistence |
+| **AI** | Gemini 2.5 Flash | Vision analysis |
+| **Auth** | GitHub OAuth | Private repo access |
+| **Parser** | Custom Vue SFC parser | Component extraction |
 
 ---
 
-## 🧪 Testing
+## 📁 Project Structure
+
+```
+designsync-server/
+├── src/
+│   ├── controllers/          # Request handlers
+│   │   ├── projectController.ts
+│   │   ├── reviewController.ts
+│   │   ├── uiLibraryController.ts
+│   │   └── authController.ts
+│   ├── models/               # Mongoose schemas
+│   │   ├── Project.ts
+│   │   ├── Review.ts
+│   │   └── UILibrary.ts
+│   ├── services/             # Business logic
+│   │   ├── geminiAnalyzer.ts    # AI analysis
+│   │   ├── githubService.ts     # GitHub API
+│   │   └── vueParser.ts         # Component parsing
+│   ├── routes/               # API routes
+│   │   ├── projectRoutes.ts
+│   │   ├── reviewRoutes.ts
+│   │   ├── uiLibraryRoutes.ts
+│   │   └── authRoutes.ts
+│   └── server.ts             # App entry point
+├── .env                      # Environment config
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## 🎯 Key Features
+
+### ✅ Type-Safe API
+- Full TypeScript coverage
+- Mongoose type definitions
+- Compile-time error checking
+
+### ✅ Async Job Processing
+- Non-blocking analysis
+- Progress tracking via phases
+- Graceful error handling
+
+### ✅ Smart Component Detection
+- Regex-based Vue SFC parsing
+- Props, slots, variants extraction
+- Framework-agnostic design
+
+### ✅ Deduplication Logic
+- Component name normalization
+- Intelligent merging of props/slots
+- Handles AI response variations
+
+### ✅ Security
+- GitHub OAuth for private repos
+- Scoped API access
+- Token encryption at rest
+
+---
+
+## 🔧 Development
+
+### Build
 
 ```bash
-# Backend tests
-cd designsync-server
-npm test
+npm run build
+```
 
-# Frontend tests
-cd designsync-app
-npm test
+### Start Production
+
+```bash
+npm start
+```
+
+### Type Check
+
+```bash
+npx tsc --noEmit
 ```
 
 ---
 
-## 👥 Team
+## 📈 Performance Considerations
 
-Built for Dev Nitro 2026 by the DesignSync team.
+- **Analysis Time**: ~30-60 seconds per review (3 AI calls)
+- **Concurrent Analyses**: Queued via background jobs
+- **Rate Limits**: Gemini API ~60 req/min
+- **Database**: Indexed on `projectId`, `createdAt`
+
+---
+
+## 🎓 Built for Dev Nitro 2026
+
+**Theme**: Quality Enhancement  
+**Problem**: Design-to-dev handoff gaps cause 8-12 hours of rework per feature  
+**Solution**: AI-powered verification before development starts
 
 ---
 
 ## 📄 License
 
 Internal use only. All code becomes company IP per contest rules.
-
----
-
-<div align="center">
-
-**DesignSync** — *Catch design gaps before they become code bugs*
-
-</div>
-# kickoff
