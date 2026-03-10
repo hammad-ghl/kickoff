@@ -53,10 +53,6 @@ graph TB
     I --> L[Actionable Report]
     J --> L
     K --> L
-    
-    style B fill:#ff6f00
-    style H fill:#9333ea
-    style L fill:#22c55e
 ```
 
 **How It Works:**
@@ -144,10 +140,6 @@ flowchart TB
     MongoDB --> Projects
     MongoDB --> Reviews
     MongoDB --> Libraries
-    
-    style Gemini fill:#9333ea
-    style GeminiAPI fill:#ff6f00
-    style MongoDB fill:#47a248
 ```
 
 ### Tech Stack
@@ -198,9 +190,6 @@ sequenceDiagram
     
     API->>MongoDB: Mark Complete
     Frontend->>User: Show Results
-    
-    style Gemini fill:#ff6f00
-    style MongoDB fill:#47a248
 ```
 
 ---
