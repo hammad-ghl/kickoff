@@ -77,7 +77,7 @@
           <!-- Optional fields -->
           <div class="pt-2">
             <button 
-              class="text-xs font-mono text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
+              class="text-xs font-mono text-muted-foreground hover:text-white border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
               @click="showFigmaOptional = !showFigmaOptional"
             >
               {{ showFigmaOptional ? '−' : '+' }} Scope options
@@ -151,7 +151,7 @@
           <!-- Optional fields -->
           <div class="pt-2">
             <button 
-              class="text-xs font-mono text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
+              class="text-xs font-mono text-muted-foreground hover:text-white border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
               @click="showLibOptional = !showLibOptional"
             >
               {{ showLibOptional ? '−' : '+' }} Path & branch options
@@ -245,7 +245,7 @@
       <!-- Name mappings -->
       <div class="pt-2">
         <button 
-          class="text-xs font-mono text-muted-foreground hover:text-primary border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
+          class="text-xs font-mono text-muted-foreground hover:text-white border border-dashed border-border hover:border-primary px-3 py-1.5 rounded transition-colors w-full text-left"
           @click="showNameMap = !showNameMap"
         >
           {{ showNameMap ? '−' : '+' }} Component name mappings

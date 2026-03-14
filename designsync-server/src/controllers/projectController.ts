@@ -6,7 +6,7 @@ import { generateCasesFromPRD } from '../services/geminiAnalyzer';
 
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, uiLibraryIds, prdText } = req.body;
+    const { name, description, uiLibraryIds, prdText, status } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
@@ -20,6 +20,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
       prdText: prdText || '',
       expectedCases: [],
       casesGeneratedFrom: null,
+      status: status || 'draft',
     });
 
     await project.save();
@@ -72,6 +73,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
           _id: project._id,
           name: project.name,
           description: project.description,
+          status: project.status || 'draft',
           uiLibraryCount: uiLibs?.length || 0,
           componentCount: totalComponents[0]?.total || 0,
           expectedCasesCount: project.expectedCases?.length || 0,
@@ -99,7 +101,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 export const updateProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, description, uiLibraryIds, prdText, expectedCases, casesGeneratedFrom } = req.body;
+    const { name, description, uiLibraryIds, prdText, expectedCases, casesGeneratedFrom, status } = req.body;
 
     const project = await Project.findById(id);
 
@@ -114,6 +116,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (prdText !== undefined) project.prdText = prdText;
     if (expectedCases !== undefined) project.expectedCases = expectedCases;
     if (casesGeneratedFrom !== undefined) project.casesGeneratedFrom = casesGeneratedFrom;
+    if (status !== undefined) project.status = status;
 
     await project.save();
 

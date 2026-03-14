@@ -1,51 +1,86 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { ref, computed } from 'vue';
 
-function getSessionHeader(): Record<string, string> {
-  const sessionId = localStorage.getItem('github_session');
-  return sessionId ? { 'X-Session-Id': sessionId } : {};
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+export interface ExpectedCase {
+  name: string;
+  description?: string;
+}
+
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface ComponentDef {
   name: string;
-  description?: string;
+  filePath?: string;
   props?: string[];
   slots?: string[];
   variants?: string[];
-  filePath?: string;
-  framework?: 'vue' | 'react' | 'svelte' | 'angular' | 'unknown';
+  description?: string;
+  framework?: string;
 }
 
-export interface UILibrarySource {
-  type: 'github';
-  owner: string;
-  repo: string;
-  branch: string;
-  componentPath?: string;
-  fullName?: string;
+export interface IComponentCheck {
+  componentName: string;
+  exists: boolean;
+  hasIssue: boolean;
+  issueDescription?: string;
+  propsUsed?: string[];
+  propsMissing?: string[];
+  slotsUsed?: string[];
+  slotsMissing?: string[];
+  boundingBox?: BoundingBox;
+}
+
+export interface CaseCheck {
+  caseName: string;
+  status: 'pending' | 'covered' | 'partial' | 'missing' | 'unclear';
+  designEvidence?: string;
+  notes?: string;
+}
+
+export interface Review {
+  _id: string;
+  title: string;
+  projectId: string;
+  designImage: string; // Keep for backward compatibility (first image)
+  designImages?: string[]; // New field for multiple images
+  analysisPhase: 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'completed' | 'failed';
+  caseChecks: CaseCheck[];
+  componentChecks: IComponentCheck[];
+  createdAt: string;
+  updatedAt: string;
+  analysisError?: string;
 }
 
 export interface UILibrary {
   _id: string;
   name: string;
   description?: string;
-  source: UILibrarySource;
-  components: ComponentDef[];
-  componentCount?: number;
+  source: { // Simplified for now
+    provider: 'github';
+    owner: string;
+    repo: string;
+    branch: string;
+    fullName: string;
+    componentPath?: string;
+  };
+  components?: ComponentDef[];
+  componentCount?: number; // Added for convenience
   lastSyncedAt?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface ExpectedCase {
-  name: string;
-  description: string;
-  importance: 'critical' | 'important' | 'nice-to-have';
 }
 
 export interface Project {
   _id: string;
   name: string;
   description?: string;
+  status?: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
   uiLibraryIds: (string | UILibrary)[];
   prdText?: string;
   expectedCases: ExpectedCase[];
@@ -63,335 +98,219 @@ export interface Project {
   updatedAt: string;
 }
 
-export interface ComponentCheck {
-  componentName: string;
-  exists: boolean;
-  hasIssue: boolean;
-  issueDescription?: string;
-  propsUsed?: string[];
-  propsMissing?: string[];
-  slotsUsed?: string[];
-  slotsMissing?: string[];
-}
-
-export interface CaseCheck {
-  caseName: string;
-  status: 'pending' | 'covered' | 'partial' | 'missing' | 'unclear';
-  designEvidence?: string;
-  notes?: string;
-}
-
-export type AnalysisPhase = 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'completed' | 'failed';
-
-export interface Review {
-  _id: string;
-  projectId: string | { 
-    _id: string; 
-    name: string; 
-    expectedCases: ExpectedCase[];
-    uiLibraryIds: (string | UILibrary)[];
-  };
-  title: string;
-  description?: string;
-  designImages: string[];
-  analysisPhase: AnalysisPhase;
-  caseChecks: CaseCheck[];
-  componentChecks: ComponentCheck[];
-  analysisError?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export function useApi() {
-  async function getAllUILibraries(): Promise<UILibrary[]> {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries`);
+  const githubSessionId = ref<string | null>(localStorage.getItem('github_session'));
 
+  const headers = computed(() => ({
+    'Content-Type': 'application/json',
+    ...(githubSessionId.value && { 'X-Session-Id': githubSessionId.value }),
+  }));
+
+  async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`,
+      { ...options, headers: { ...headers.value, ...options?.headers } }
+    );
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch UI libraries');
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Something went wrong');
     }
-
     return response.json();
+  }
+
+  // GitHub Auth
+  async function getGithubAuthUrl(): Promise<{ url: string }> {
+    return apiFetch('/auth/github');
+  }
+
+  async function exchangeGithubCode(code: string): Promise<{ sessionId: string }> {
+    const response = await apiFetch<{ sessionId: string }>('/auth/github/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    githubSessionId.value = response.sessionId;
+    localStorage.setItem('github_session', response.sessionId);
+    return response;
+  }
+
+  function logoutGithub() {
+    githubSessionId.value = null;
+    localStorage.removeItem('github_session');
+  }
+
+  async function getGithubRepos(): Promise<any[]> {
+    if (!githubSessionId.value) {
+      throw new Error('GitHub session not found. Please authenticate.');
+    }
+    return apiFetch('/github/repos');
+  }
+
+  async function getGithubBranches(owner: string, repo: string): Promise<any[]> {
+    if (!githubSessionId.value) {
+      throw new Error('GitHub session not found. Please authenticate.');
+    }
+    return apiFetch(`/github/repos/${owner}/${repo}/branches`);
+  }
+
+  // UILibrary Operations
+  async function createUILibrary(data: { name: string; description?: string; source: any }): Promise<UILibrary> {
+    return apiFetch('/ui-libraries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async function getAllUILibraries(): Promise<UILibrary[]> {
+    return apiFetch('/ui-libraries');
   }
 
   async function getUILibrary(id: string): Promise<UILibrary> {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries/${id}`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch UI library');
-    }
-
-    return response.json();
-  }
-
-  async function createUILibrary(data: {
-    name: string;
-    description?: string;
-    source: UILibrarySource;
-  }): Promise<UILibrary> {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getSessionHeader(),
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to create UI library');
-    }
-
-    return response.json();
+    return apiFetch(`/ui-libraries/${id}`);
   }
 
   async function updateUILibrary(id: string, data: { name?: string; description?: string }): Promise<UILibrary> {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries/${id}`, {
+    return apiFetch(`/ui-libraries/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to update UI library');
-    }
-
-    return response.json();
   }
 
-  async function deleteUILibrary(id: string) {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries/${id}`, {
+  async function deleteUILibrary(id: string): Promise<void> {
+    return apiFetch(`/ui-libraries/${id}`, {
       method: 'DELETE',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to delete UI library');
-    }
-
-    return response.json();
   }
 
-  async function syncUILibrary(id: string): Promise<{ message: string; componentCount: number; lastSyncedAt: string }> {
-    const response = await fetch(`${API_BASE_URL}/api/ui-libraries/${id}/sync`, {
+  async function syncUILibrary(id: string): Promise<{ componentCount: number; lastSyncedAt: string }> {
+    return apiFetch(`/ui-libraries/${id}/sync`, {
       method: 'POST',
-      headers: getSessionHeader(),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to sync UI library');
-    }
-
-    return response.json();
   }
 
-  async function createProject(
-    name: string, 
-    description?: string, 
-    uiLibraryIds?: string[],
-    prdText?: string
-  ): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/api/projects`, {
+  // Project Operations
+  async function createProject(data: { 
+    name: string; 
+    description?: string; 
+    uiLibraryIds: string[]; 
+    prdText?: string; 
+    expectedCases?: ExpectedCase[];
+    casesGeneratedFrom?: 'prd' | 'image' | 'manual' | null;
+    status?: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
+  }): Promise<Project> {
+    return apiFetch('/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, uiLibraryIds, prdText }),
+      body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to create project');
-    }
-
-    return response.json();
-  }
-
-  async function getProject(id: string): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch project');
-    }
-
-    return response.json();
   }
 
   async function getAllProjects(): Promise<Project[]> {
-    const response = await fetch(`${API_BASE_URL}/api/projects`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch projects');
-    }
-
-    return response.json();
+    return apiFetch('/projects');
   }
 
-  async function updateProject(id: string, data: { 
-    name?: string; 
-    description?: string; 
-    uiLibraryIds?: string[];
-    prdText?: string;
-    expectedCases?: ExpectedCase[];
-    casesGeneratedFrom?: 'prd' | 'image' | 'manual' | null;
-  }): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+  async function getProject(id: string): Promise<Project> {
+    return apiFetch(`/projects/${id}`);
+  }
+
+  async function updateProject(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      uiLibraryIds?: string[];
+      prdText?: string;
+      expectedCases?: ExpectedCase[];
+      casesGeneratedFrom?: 'prd' | 'image' | 'manual' | null;
+      status?: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
+    }
+  ): Promise<Project> {
+    return apiFetch(`/projects/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to update project');
-    }
-
-    return response.json();
   }
 
-  async function deleteProject(id: string) {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+  async function deleteProject(id: string): Promise<void> {
+    return apiFetch(`/projects/${id}`, {
       method: 'DELETE',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to delete project');
-    }
-
-    return response.json();
   }
 
-  async function generateProjectCases(projectId: string): Promise<{ casesCount: number; expectedCases: ExpectedCase[] }> {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/generate-cases`, {
+  async function generateProjectCases(projectId: string, casesSource: 'prd' | 'image'): Promise<{ message: string }> {
+    return apiFetch(`/projects/${projectId}/generate-cases`, {
       method: 'POST',
+      body: JSON.stringify({ casesSource }),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to generate cases');
-    }
-
-    return response.json();
   }
 
-  async function getProjectReviews(projectId: string): Promise<Review[]> {
-    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/reviews`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch reviews');
-    }
-
-    return response.json();
-  }
-
-  async function createReview(
-    projectId: string, 
-    title: string, 
-    description?: string, 
-    designImages?: string[]
-  ): Promise<Review> {
-    const response = await fetch(`${API_BASE_URL}/api/reviews`, {
+  // Review Operations
+  async function startReview(projectId: string, designImage: string, title: string): Promise<Review> {
+    return apiFetch(`/projects/${projectId}/reviews`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId, title, description, designImages }),
+      body: JSON.stringify({ designImage, title }),
     });
+  }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to create review');
-    }
-
-    return response.json();
+  async function createReview(projectId: string, data: { designImages: string[]; title: string }): Promise<Review> {
+    return apiFetch(`/projects/${projectId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async function getReview(id: string): Promise<Review> {
-    const response = await fetch(`${API_BASE_URL}/api/reviews/${id}`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch review');
-    }
-
-    return response.json();
+    return apiFetch(`/reviews/${id}`);
   }
 
-  async function updateReview(id: string, data: Partial<Review>): Promise<Review> {
-    const response = await fetch(`${API_BASE_URL}/api/reviews/${id}`, {
+  async function getAllReviewsForProject(projectId: string): Promise<Review[]> {
+    return apiFetch(`/projects/${projectId}/reviews`);
+  }
+
+  async function updateReview(reviewId: string, data: Partial<Review>): Promise<Review> {
+    return apiFetch(`/reviews/${reviewId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to update review');
-    }
-
-    return response.json();
   }
 
-  async function deleteReview(id: string) {
-    const response = await fetch(`${API_BASE_URL}/api/reviews/${id}`, {
+  async function deleteReview(id: string): Promise<void> {
+    return apiFetch(`/reviews/${id}`, {
       method: 'DELETE',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to delete review');
-    }
-
-    return response.json();
   }
 
-  async function getAllReviews(): Promise<Review[]> {
-    const response = await fetch(`${API_BASE_URL}/api/reviews`);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to fetch reviews');
-    }
-
-    return response.json();
-  }
-
-  async function analyzeReview(reviewId: string): Promise<{ message: string; reviewId: string; analysisPhase: AnalysisPhase }> {
-    const response = await fetch(`${API_BASE_URL}/api/reviews/${reviewId}/analyze`, {
+  async function reAnalyzeReview(reviewId: string): Promise<Review> {
+    return apiFetch(`/reviews/${reviewId}/reanalyze`, {
       method: 'POST',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Failed to analyze design');
-    }
-
-    return response.json();
   }
 
   return {
+    githubSessionId,
+    getGithubAuthUrl,
+    exchangeGithubCode,
+    logoutGithub,
+    getGithubRepos,
+    getGithubBranches,
+
+    createUILibrary,
     getAllUILibraries,
     getUILibrary,
-    createUILibrary,
     updateUILibrary,
     deleteUILibrary,
     syncUILibrary,
+
     createProject,
-    getProject,
     getAllProjects,
+    getProject,
     updateProject,
     deleteProject,
     generateProjectCases,
-    getProjectReviews,
+
+    startReview,
     createReview,
     getReview,
+    getAllReviewsForProject,
     updateReview,
     deleteReview,
-    getAllReviews,
-    analyzeReview,
+    reAnalyzeReview,
   };
 }

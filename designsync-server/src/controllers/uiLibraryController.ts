@@ -61,7 +61,7 @@ export const createUILibrary = async (req: Request, res: Response) => {
 export const getAllUILibraries = async (req: Request, res: Response) => {
   try {
     const libraries = await UILibrary.find()
-      .select('name description source.fullName source.owner source.repo lastSyncedAt createdAt updatedAt')
+      .select('name description source components lastSyncedAt createdAt updatedAt')
       .sort({ updatedAt: -1 });
 
     const result = libraries.map(lib => ({
@@ -69,6 +69,7 @@ export const getAllUILibraries = async (req: Request, res: Response) => {
       name: lib.name,
       description: lib.description,
       source: lib.source,
+      components: lib.components,
       componentCount: lib.components?.length || 0,
       lastSyncedAt: lib.lastSyncedAt,
       createdAt: lib.createdAt,

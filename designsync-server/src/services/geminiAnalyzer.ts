@@ -298,7 +298,7 @@ ${input.projectName ? `**Project/Feature Name:** ${input.projectName}` : ''}
 
 **Tasks:**
 1. Identify the UNIQUE component types used in the design (buttons, inputs, cards, modals, nav items, tables, icons, etc.)
-2. **IMPORTANT: Do NOT list duplicates.** If a component type (e.g., Button) appears multiple times in the design, only include it ONCE in your output. Consolidate all usages of the same component into a single entry.
+2. **IMPORTANT: Do NOT list duplicates.** If a component type (e.g., Button) appears multiple times in the design, only include it ONCE in your output. Pick the MOST PROMINENT or FIRST instance for the bounding box.
 3. For each unique component type:
    - Match it to the closest component in the library by name (use exact library name if it matches)
    - Set exists: true if it matches a library component, false if not in library
@@ -308,6 +308,13 @@ ${input.projectName ? `**Project/Feature Name:** ${input.projectName}` : ''}
      - The design requires functionality the library component doesn't support
    - If hasIssue, explain why in issueDescription
    - Aggregate ALL props/slots used across all instances of this component type
+   - **CRITICAL: Provide a bounding box** for ONE representative instance of this component in the image
+
+**Bounding Box Format:**
+- x: horizontal position from left edge as decimal (0.0 = left edge, 1.0 = right edge)
+- y: vertical position from top edge as decimal (0.0 = top edge, 1.0 = bottom edge)
+- width: width as decimal fraction of image width
+- height: height as decimal fraction of image height
 
 **Output format:** Reply with a single JSON object only, no markdown or extra text:
 {
@@ -320,12 +327,13 @@ ${input.projectName ? `**Project/Feature Name:** ${input.projectName}` : ''}
       "propsUsed": ["string (all props used across all instances)"],
       "propsMissing": ["string"],
       "slotsUsed": ["string"],
-      "slotsMissing": ["string"]
+      "slotsMissing": ["string"],
+      "boundingBox": { "x": 0.0-1.0, "y": 0.0-1.0, "width": 0.0-1.0, "height": 0.0-1.0 }
     }
   ]
 }
 
-Remember: Each component type should appear EXACTLY ONCE in the output. Analyze all screenshots and return only the JSON object.`;
+Remember: Each component type should appear EXACTLY ONCE. Always include a boundingBox for visual reference. Analyze all screenshots and return only the JSON object.`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -346,16 +354,37 @@ Remember: Each component type should appear EXACTLY ONCE in the output. Analyze 
     throw new Error(`Gemini response was not valid JSON: ${text.slice(0, 200)}...`);
   }
 
-  const rawChecks: IComponentCheck[] = (parsed.componentChecks || []).map((c: any) => ({
-    componentName: String(c.componentName ?? '').trim(),
-    exists: Boolean(c.exists === true),
-    hasIssue: Boolean(c.hasIssue === true),
-    issueDescription: c.issueDescription ? String(c.issueDescription) : undefined,
-    propsUsed: Array.isArray(c.propsUsed) ? c.propsUsed.map(String) : undefined,
-    propsMissing: Array.isArray(c.propsMissing) ? c.propsMissing.map(String) : undefined,
-    slotsUsed: Array.isArray(c.slotsUsed) ? c.slotsUsed.map(String) : undefined,
-    slotsMissing: Array.isArray(c.slotsMissing) ? c.slotsMissing.map(String) : undefined,
-  }));
+  const rawChecks: IComponentCheck[] = (parsed.componentChecks || []).map((c: any) => {
+    let boundingBox = undefined;
+    if (c.boundingBox && typeof c.boundingBox === 'object') {
+      const bb = c.boundingBox;
+      if (
+        typeof bb.x === 'number' && 
+        typeof bb.y === 'number' && 
+        typeof bb.width === 'number' && 
+        typeof bb.height === 'number'
+      ) {
+        boundingBox = {
+          x: Math.max(0, Math.min(1, bb.x)),
+          y: Math.max(0, Math.min(1, bb.y)),
+          width: Math.max(0, Math.min(1, bb.width)),
+          height: Math.max(0, Math.min(1, bb.height)),
+        };
+      }
+    }
+    
+    return {
+      componentName: String(c.componentName ?? '').trim(),
+      exists: Boolean(c.exists === true),
+      hasIssue: Boolean(c.hasIssue === true),
+      issueDescription: c.issueDescription ? String(c.issueDescription) : undefined,
+      propsUsed: Array.isArray(c.propsUsed) ? c.propsUsed.map(String) : undefined,
+      propsMissing: Array.isArray(c.propsMissing) ? c.propsMissing.map(String) : undefined,
+      slotsUsed: Array.isArray(c.slotsUsed) ? c.slotsUsed.map(String) : undefined,
+      slotsMissing: Array.isArray(c.slotsMissing) ? c.slotsMissing.map(String) : undefined,
+      boundingBox,
+    };
+  });
 
   console.log(`[Component Analysis] Raw: ${rawChecks.length} components, Names: ${rawChecks.map(c => c.componentName).join(', ')}`);
   
@@ -393,6 +422,10 @@ function deduplicateComponentChecks(checks: IComponentCheck[]): IComponentCheck[
       existing.propsMissing = mergeArrays(existing.propsMissing, check.propsMissing);
       existing.slotsUsed = mergeArrays(existing.slotsUsed, check.slotsUsed);
       existing.slotsMissing = mergeArrays(existing.slotsMissing, check.slotsMissing);
+      // Keep the first bounding box (most prominent instance)
+      if (!existing.boundingBox && check.boundingBox) {
+        existing.boundingBox = check.boundingBox;
+      }
     }
   }
 

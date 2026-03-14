@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+export interface IBoundingBox {
+  x: number;      // percentage from left (0-1)
+  y: number;      // percentage from top (0-1)
+  width: number;  // percentage of image width (0-1)
+  height: number; // percentage of image height (0-1)
+}
+
 export interface IComponentCheck {
   componentName: string;
   exists: boolean;
@@ -9,6 +16,7 @@ export interface IComponentCheck {
   propsMissing?: string[];
   slotsUsed?: string[];
   slotsMissing?: string[];
+  boundingBox?: IBoundingBox;
 }
 
 export interface ICaseCheck {
@@ -33,6 +41,13 @@ export interface IReview extends Document {
   updatedAt: Date;
 }
 
+const BoundingBoxSchema = new Schema({
+  x: { type: Number, required: true },
+  y: { type: Number, required: true },
+  width: { type: Number, required: true },
+  height: { type: Number, required: true },
+}, { _id: false });
+
 const ComponentCheckSchema = new Schema({
   componentName: { type: String, required: true },
   exists: { type: Boolean, default: true },
@@ -42,6 +57,7 @@ const ComponentCheckSchema = new Schema({
   propsMissing: [String],
   slotsUsed: [String],
   slotsMissing: [String],
+  boundingBox: BoundingBoxSchema,
 }, { _id: false });
 
 const CaseCheckSchema = new Schema({

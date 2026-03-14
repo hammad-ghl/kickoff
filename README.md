@@ -1,4 +1,4 @@
-# Kickoff
+# Kickoff: Design-Dev Bridge
 
 **AI-Powered Design-to-Code Verification Platform**
 

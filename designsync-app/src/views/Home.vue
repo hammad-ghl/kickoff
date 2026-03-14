@@ -1,128 +1,63 @@
 <template>
-  <div class="max-w-4xl mx-auto">
-    <!-- Hero Section -->
-    <div class="text-center mt-20 mb-[120px]">
-      <div class="text-7xl mb-6 animate-float">📋</div>
-      <h1 class="text-5xl font-bold mb-4">
-        DesignSync
+  <div class="h-full flex items-center justify-center bg-primary p-8">
+    <div class="max-w-lg w-full text-center">
+      <!-- Logo -->
+      <div class="w-20 h-20 bg-tertiary rounded-3xl flex items-center justify-center mx-auto mb-8 overflow-hidden shadow-2xl border border-border-low">
+        <img src="../assets/kickoff-logo.png" alt="Kickoff Logo" class="w-full h-full object-cover" />
+      </div>
+      
+      <!-- Title -->
+      <h1 class="text-[24px] font-normal text-[#e8eaed] mb-2">
+        Welcome to Kickoff
       </h1>
-      <p class="text-base text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
-        Design Review Assistant — Ensure your designs use the right components and cover all user flows before development begins.
+      <p class="text-[14px] text-[#9aa0a6] max-w-sm mx-auto mb-8 leading-relaxed">
+        AI-powered design review assistant. Streamline feature development from PRD to production-ready code.
       </p>
       
-      <!-- Feature Pills -->
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl mx-auto mb-12">
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">📦</div>
-          <div class="text-xs font-medium text-muted-foreground">Component Library Catalog</div>
-        </div>
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">🖼️</div>
-          <div class="text-xs font-medium text-muted-foreground">Upload Design Screenshots</div>
-        </div>
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">✅</div>
-          <div class="text-xs font-medium text-muted-foreground">Component Checklist</div>
-        </div>
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">🔄</div>
-          <div class="text-xs font-medium text-muted-foreground">Flow Coverage Check</div>
-        </div>
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">⚠️</div>
-          <div class="text-xs font-medium text-muted-foreground">Gap Detection</div>
-        </div>
-        <div class="p-4 bg-card border border-border hover:border-foreground/30 transition-colors">
-          <div class="text-2xl mb-2">📊</div>
-          <div class="text-xs font-medium text-muted-foreground">Review History</div>
-        </div>
+      <!-- Feature Chips -->
+      <div class="flex flex-wrap justify-center gap-2 mb-8">
+        <span class="chip">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          PRD Analysis
+        </span>
+        <span class="chip">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Design Review
+        </span>
+        <span class="chip">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          Coverage Check
+        </span>
+        <span class="chip">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Component Mapping
+        </span>
       </div>
 
       <!-- CTA Buttons -->
       <div class="flex items-center justify-center gap-3">
-        <router-link 
-          to="/projects/new"
-          class="px-6 py-3 bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all hover:scale-105 flex items-center gap-2 border border-border"
-        >
-          <span>Create New Project</span>
-          <span class="text-lg">→</span>
+        <router-link to="/features/new" class="btn-primary p-5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        <p class="text-sm font-semibold">  Create Feature</p>
         </router-link>
-        <router-link 
-          v-if="projectCount > 0"
-          to="/projects"
-          class="px-6 py-3 bg-card border border-border text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          View Projects ({{ projectCount }})
+        <router-link to="/features" class="btn-secondary p-5 text-white">
+        <p class="text-sm font-medium">  View Features</p>
         </router-link>
-      </div>
-    </div>
-
-    <!-- How It Works -->
-    <div class="mb-16">
-      <div class="text-xs font-mono uppercase tracking-wider text-foreground/60 mb-6 text-center">
-        How It Works
-      </div>
-      <div class="grid md:grid-cols-3 gap-6">
-        <div class="p-6 bg-card border border-border hover:border-foreground/30 transition-all hover:-translate-y-1">
-          <div class="w-12 h-12 bg-foreground/10 border border-border flex items-center justify-center text-xl font-bold mb-4">
-            1
-          </div>
-          <h3 class="text-base font-semibold mb-2">Define Components</h3>
-          <p class="text-sm text-muted-foreground leading-relaxed">
-            Add your UI library components with their props, slots, and variants
-          </p>
-        </div>
-        <div class="p-6 bg-card border border-border hover:border-foreground/30 transition-all hover:-translate-y-1">
-          <div class="w-12 h-12 bg-foreground/10 border border-border flex items-center justify-center text-xl font-bold mb-4">
-            2
-          </div>
-          <h3 class="text-base font-semibold mb-2">Upload Design</h3>
-          <p class="text-sm text-muted-foreground leading-relaxed">
-            Paste a screenshot of your design and tag which components are used
-          </p>
-        </div>
-        <div class="p-6 bg-card border border-border hover:border-foreground/30 transition-all hover:-translate-y-1">
-          <div class="w-12 h-12 bg-foreground/10 border border-border flex items-center justify-center text-xl font-bold mb-4">
-            3
-          </div>
-          <h3 class="text-base font-semibold mb-2">Review & Catch Gaps</h3>
-          <p class="text-sm text-muted-foreground leading-relaxed">
-            Check flow coverage (CRUD, states) and flag missing/incompatible components
-          </p>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useApi } from '../composables/useApi';
-
-const { getAllProjects } = useApi();
-const projectCount = ref(0);
-
-onMounted(async () => {
-  try {
-    const projects = await getAllProjects();
-    projectCount.value = projects.length;
-  } catch (error) {
-    console.error('Failed to load projects count:', error);
-  }
-});
+// Pure presentation component
 </script>
-
-<style scoped>
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-</style>

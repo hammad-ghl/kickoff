@@ -20,23 +20,23 @@ const router = createRouter({
       component: Home,
     },
     {
-      path: '/projects',
-      name: 'projects',
+      path: '/features',
+      name: 'features',
       component: ProjectsList,
     },
     {
-      path: '/projects/new',
-      name: 'create-project',
+      path: '/features/new',
+      name: 'create-feature',
       component: CreateProject,
     },
     {
-      path: '/projects/:id',
-      name: 'project-detail',
+      path: '/features/:id',
+      name: 'feature-detail',
       component: ProjectDetail,
     },
     {
-      path: '/projects/:id/edit',
-      name: 'edit-project',
+      path: '/features/:id/edit',
+      name: 'edit-feature',
       component: EditProject,
     },
     {
@@ -63,6 +63,23 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'auth-callback',
       component: AuthCallback,
+    },
+    // Redirect old routes to new routes
+    {
+      path: '/projects',
+      redirect: '/features',
+    },
+    {
+      path: '/projects/new',
+      redirect: '/features/new',
+    },
+    {
+      path: '/projects/:id',
+      redirect: to => `/features/${to.params.id}`,
+    },
+    {
+      path: '/projects/:id/edit',
+      redirect: to => `/features/${to.params.id}/edit`,
     },
   ],
 });

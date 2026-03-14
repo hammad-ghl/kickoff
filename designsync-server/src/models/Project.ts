@@ -9,6 +9,7 @@ export interface IExpectedCase {
 export interface IProject extends Document {
   name: string;
   description?: string;
+  status: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
   uiLibraryIds: Types.ObjectId[];
   prdText?: string;
   expectedCases: IExpectedCase[];
@@ -31,6 +32,11 @@ const ProjectSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
+    status: { 
+      type: String, 
+      enum: ['draft', 'prd_complete', 'ready_for_design', 'in_design', 'in_design_review', 'ready_for_kickoff'],
+      default: 'draft'
+    },
     uiLibraryIds: [{
       type: Schema.Types.ObjectId,
       ref: 'UILibrary',

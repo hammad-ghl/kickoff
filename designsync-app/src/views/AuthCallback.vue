@@ -38,7 +38,7 @@ onMounted(async () => {
     handleCallback(session);
     await checkSession();
     
-    const returnTo = localStorage.getItem('auth_return_to') || '/projects/new';
+    const returnTo = localStorage.getItem('auth_return_to') || '/features/new';
     localStorage.removeItem('auth_return_to');
     router.push(returnTo);
   } else {

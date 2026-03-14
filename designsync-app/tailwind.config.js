@@ -7,44 +7,34 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-        mono: ['DM Mono', 'ui-monospace', 'monospace'],
+        sans: ['Google Sans', 'Roboto', 'ui-sans-serif', 'system-ui'],
+        mono: ['Roboto Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
-        border: "hsl(240 3.7% 15.9%)",
-        input: "hsl(240 3.7% 15.9%)",
-        ring: "hsl(263.4 70% 50.4%)",
-        background: "hsl(240 10% 3.9%)",
-        foreground: "hsl(0 0% 98%)",
-        primary: {
-          DEFAULT: "hsl(263.4 70% 50.4%)",
-          foreground: "hsl(210 20% 98%)",
-        },
-        secondary: {
-          DEFAULT: "hsl(240 4.8% 12.5%)",
-          foreground: "hsl(0 0% 98%)",
-        },
-        destructive: {
-          DEFAULT: "hsl(0 62.8% 30.6%)",
-          foreground: "hsl(0 0% 98%)",
-        },
-        muted: {
-          DEFAULT: "hsl(240 3.7% 15.9%)",
-          foreground: "hsl(240 5% 64.9%)",
-        },
-        accent: {
-          DEFAULT: "hsl(240 4.8% 12.5%)",
-          foreground: "hsl(0 0% 98%)",
-        },
-        card: {
-          DEFAULT: "hsl(240 10% 6%)",
-          foreground: "hsl(0 0% 98%)",
-        },
+        // Use CSS variables for colors
+        primary: 'var(--color-text-primary)',
+        secondary: 'var(--color-text-secondary)',
+        tertiary: 'var(--color-text-tertiary)',
+        brand: 'var(--color-brand-primary)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        error: 'var(--color-error)',
+      },
+      backgroundColor: {
+        primary: 'var(--color-bg-primary)',
+        secondary: 'var(--color-bg-secondary)',
+        tertiary: 'var(--color-bg-tertiary)',
+        hover: 'var(--color-bg-hover)',
+      },
+      borderColor: {
+        primary: 'var(--color-border-primary)',
+        secondary: 'var(--color-border-secondary)',
+        tertiary: 'var(--color-border-tertiary)',
       },
       borderRadius: {
-        lg: "2px",
-        md: "2px",
-        sm: "2px",
+        lg: "12px",
+        md: "8px",
+        sm: "4px",
       },
     },
   },

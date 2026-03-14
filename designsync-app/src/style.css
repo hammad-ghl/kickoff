@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,48 +6,380 @@
 
 @layer base {
   :root {
-    /* fal.ai base colors */
-    --background: 240 10% 4%;      /* #0a0a0c - deep charcoal */
-    --foreground: 0 0% 98%;        /* Soft white */
+    /* Main Colors */
+    --color-bg-primary: #191919;
+    --color-bg-secondary: #151414;
+    --color-bg-tertiary: #181818;
+    --color-bg-hover: rgba(60, 64, 67, 0.3);
     
-    /* Subtle depth with cards */
-    --card: 240 6% 7%;             /* #111113 - slightly lighter than bg */
-    --card-foreground: 0 0% 98%;
+    /* Text Colors */
+    --color-text-primary: #e8eaed;
+    --color-text-secondary: #9aa0a6;
+    --color-text-tertiary: #5f6368;
     
-    /* signature fal.ai purple */
-    --primary: 255 76% 62%;        /* #8257e5 */
-    --primary-foreground: 0 0% 100%;
+    /* Brand Colors */
+    --color-brand-primary: #87a9ff;
+    --color-brand-primary-hover: #a1afc9;
+    --color-brand-active-bg: #2a2a2a;
+    --color-brand-active-text: #efefef;
     
-    --secondary: 240 4% 12%;       /* #1e1e20 */
-    --secondary-foreground: 0 0% 98%;
+    /* Status Colors */
+    --color-success: #81c995;
+    --color-success-bg: rgba(30, 58, 47, 0.5);
+    --color-success-border: rgba(129, 201, 149, 0.2);
     
-    --muted: 240 4% 12%;           /* #1e1e20 */
-    --muted-foreground: 240 5% 65%; /* Soft gray */
+    --color-warning: #fdd663;
+    --color-warning-bg: rgba(61, 53, 35, 0.5);
+    --color-warning-border: rgba(253, 214, 99, 0.2);
     
-    --accent: 240 4% 12%;
-    --accent-foreground: 0 0% 98%;
+    --color-error: #f28b82;
+    --color-error-bg: rgba(60, 32, 32, 0.5);
+    --color-error-border: rgba(242, 139, 130, 0.2);
     
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --color-info: #8ab4f8;
+    --color-info-bg: rgba(57, 68, 87, 0.5);
+    --color-info-border: rgba(138, 180, 248, 0.2);
     
-    /* Subtler borders */
-    --border: 240 4% 12%;          /* Very dark, low contrast */
-    --input: 240 4% 12%;
-    --ring: 255 76% 62%;
+    --color-muted: #9aa0a6;
+    --color-muted-bg: rgba(60, 64, 67, 0.5);
+    --color-muted-border: rgba(154, 160, 166, 0.2);
+    
+    /* Border Colors */
+    --color-border-primary: #3a3a3a;
+    --color-border-secondary: rgba(49, 50, 50, 0.5);
+    --color-border-tertiary: rgba(54, 59, 63, 0.2);
+    
+    /* Focus */
+    --color-focus: #8ab4f802;
+  }
+
+  * {
+    border-color: var(--color-border-primary);
   }
 
   body {
-    @apply bg-black/95 text-foreground;
-    font-family: 'Inter', sans-serif;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
-  /* Grid removed - fal.ai is clean */
   
   .font-mono {
-    font-family: 'DM Mono', monospace;
+    font-family: 'Roboto Mono', monospace;
   }
 }
 
-/* Card override removed for utility class consistency */
+@layer components {
+  /* Button Styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-full transition-colors;
+    background-color: rgb(228, 228, 228);
+    color: var(--color-bg-primary);
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--color-brand-primary-hover);
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-full border transition-colors;
+    background-color: transparent;
+    color: var(--color-brand-primary);
+    border-color: var(--color-border-primary);
+  }
+  
+  .btn-secondary:hover {
+    background-color: rgba(138, 180, 248, 0.1);
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 text-[13px] rounded-full transition-colors;
+    color: var(--color-text-secondary);
+  }
+  
+  .btn-ghost:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-hover);
+  }
+  
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-full transition-colors;
+    background-color: var(--color-error);
+    color: var(--color-bg-primary);
+  }
+  
+  .btn-danger:hover {
+    background-color: #ff6f65;
+  }
+  
+  .btn-icon {
+    @apply w-9 h-9 flex items-center justify-center rounded-full transition-colors;
+    color: var(--color-text-secondary);
+  }
+  
+  .btn-icon:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-hover);
+  }
+
+  /* Chip/Tag Styles */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] rounded-full border transition-colors cursor-pointer;
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border-color: var(--color-border-primary);
+  }
+  
+  .chip:hover {
+    background-color: var(--color-bg-hover);
+  }
+  
+  .chip-active {
+    background-color: var(--color-brand-active-bg);
+    border-color: rgba(138, 180, 248, 0.5);
+    color: var(--color-brand-primary);
+  }
+
+  /* Card Styles */
+  .card {
+    background-color: var(--color-bg-secondary);
+    /* border: 1px solid var(--color-border-primary); */
+    @apply rounded-xl;
+  }
+
+  /* Input Styles */
+  .input {
+    @apply w-full px-3 py-2.5 rounded-lg text-[14px] transition-colors;
+    background-color: var(--color-bg-primary);
+    /* border: 1px solid var(--color-border-primary); */
+    color: var(--color-text-primary);
+  }
+  
+  .input::placeholder {
+    color: var(--color-text-secondary);
+  }
+  
+  .input:focus {
+    outline: none;
+    border-color: var(--color-focus);
+  }
+
+  /* Status Badge Styles */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border;
+  }
+
+  /* Status-specific classes */
+  .status-draft {
+    background-color: var(--color-muted-bg);
+    border-color: var(--color-muted-border);
+    color: var(--color-muted);
+  }
+
+  .status-prd-complete {
+    background-color: var(--color-info-bg);
+    border-color: var(--color-info-border);
+    color: var(--color-info);
+  }
+
+  .status-ready-for-design {
+    background-color: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning);
+  }
+
+  .status-in-design {
+    background-color: rgba(251, 146, 60, 0.2);
+    border-color: rgba(251, 146, 60, 0.3);
+    color: #fb923c;
+  }
+
+  .status-in-design-review {
+    background-color: rgba(147, 197, 253, 0.2);
+    border-color: rgba(147, 197, 253, 0.3);
+    color: #93c5fd;
+  }
+
+  .status-ready-for-kickoff {
+    background-color: var(--color-success-bg);
+    border-color: var(--color-success-border);
+    color: var(--color-success);
+  }
+
+  /* Status dot classes */
+  .status-dot-draft {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: var(--color-muted);
+  }
+
+  .status-dot-prd-complete {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: var(--color-info);
+  }
+
+  .status-dot-ready-for-design {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: var(--color-warning);
+  }
+
+  .status-dot-in-design {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: #fb923c;
+  }
+
+  .status-dot-in-design-review {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: #93c5fd;
+  }
+
+  .status-dot-ready-for-kickoff {
+    @apply w-1.5 h-1.5 rounded-full;
+    background-color: var(--color-success);
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Utility Classes */
+.bg-primary {
+  background-color: var(--color-bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--color-bg-secondary);
+}
+
+.bg-hover {
+  background-color: var(--color-bg-hover);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.border-primary {
+  border-color: var(--color-border-primary);
+}
+
+.border-secondary {
+  border-color: var(--color-border-secondary);
+}
+
+.border-tertiary {
+  border-color: var(--color-border-tertiary);
+}
+
+.border-brand {
+  border-color: var(--color-brand-primary);
+}
+
+.bg-tertiary {
+  background-color: var(--color-bg-tertiary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.border-border {
+  border-color: var(--color-border-primary);
+}
+
+.border-border-low {
+  border-color: var(--color-border-tertiary);
+}
+
+/* Toast customization for dark theme */
+:root {
+  --toastify-color-light: #1a1a1a;
+  --toastify-color-dark: #1a1a1a;
+  --toastify-color-info: #8ab4f8;
+  --toastify-color-success: #81c995;
+  --toastify-color-warning: #fdd663;
+  --toastify-color-error: #f28b82;
+  --toastify-color-transparent: rgba(255, 255, 255, 0.7);
+  
+  --toastify-text-color-light: #e8eaed;
+  --toastify-text-color-dark: #e8eaed;
+  
+  --toastify-icon-color-info: var(--toastify-color-info);
+  --toastify-icon-color-success: var(--toastify-color-success);
+  --toastify-icon-color-warning: var(--toastify-color-warning);
+  --toastify-icon-color-error: var(--toastify-color-error);
+}
+
+.Vue-Toastification__toast {
+  background-color: #1a1a1a !important;
+  border: 1px solid #3a3a3a;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.875rem;
+  padding: 1rem 1.25rem;
+  min-height: auto;
+}
+
+.Vue-Toastification__toast-body {
+  padding: 0;
+  margin: 0;
+}
+
+.Vue-Toastification__toast--success {
+  border-left: 3px solid var(--toastify-color-success);
+}
+
+.Vue-Toastification__toast--error {
+  border-left: 3px solid var(--toastify-color-error);
+}
+
+.Vue-Toastification__toast--warning {
+  border-left: 3px solid var(--toastify-color-warning);
+}
+
+.Vue-Toastification__toast--info {
+  border-left: 3px solid var(--toastify-color-info);
+}
+
+.Vue-Toastification__progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, currentColor 0%, currentColor 100%);
+  opacity: 0.7;
+}
+
+.Vue-Toastification__close-button {
+  color: #9aa0a6;
+  opacity: 0.7;
+  align-self: flex-start;
+}
+
+.Vue-Toastification__close-button:hover {
+  opacity: 1;
+  color: #e8eaed;
+}
+
+.Vue-Toastification__icon {
+  width: 20px;
+  margin-right: 0.75rem;
+}
