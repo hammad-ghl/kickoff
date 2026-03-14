@@ -46,12 +46,13 @@ export interface CaseCheck {
 export interface Review {
   _id: string;
   title: string;
-  projectId: string;
-  designImage: string; // Keep for backward compatibility (first image)
-  designImages?: string[]; // New field for multiple images
-  analysisPhase: 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'completed' | 'failed';
+  projectId: string | Project;
+  designImage: string;
+  designImages?: string[];
+  analysisPhase: 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'impact_analysis' | 'completed' | 'failed';
   caseChecks: CaseCheck[];
   componentChecks: IComponentCheck[];
+  impactAnalysis?: ImpactAnalysis;
   createdAt: string;
   updatedAt: string;
   analysisError?: string;
@@ -76,12 +77,64 @@ export interface UILibrary {
   updatedAt: string;
 }
 
+export interface Repository {
+  _id: string;
+  name: string;
+  description?: string;
+  githubRepoFullName: string;
+  githubBranch: string;
+  status: 'pending' | 'indexing' | 'indexed' | 'failed';
+  indexedAt?: string;
+  featureCount: number;
+  indexingProgress?: {
+    currentStep: 'connecting' | 'analyzing_git' | 'generating_summaries' | 'building_index' | 'finalizing';
+    clustersProcessed: number;
+    totalClusters: number;
+  };
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RepoFeatureCluster {
+  _id: string;
+  repositoryId: string;
+  name: string;
+  summary: string;
+  userFlows: string[];
+  constraints: string[];
+  dependencies: string[];
+  affectedBy: string[];
+  filePaths: string[];
+  confidence: 'high' | 'medium' | 'low';
+  createdAt: string;
+}
+
+export interface RelatedFeature {
+  featureName: string;
+  relevance: string;
+  gap: string;
+  severity: 'high' | 'medium' | 'low';
+  files: string[];
+}
+
+export interface ImpactAnalysis {
+  relatedFeatures: RelatedFeature[];
+  summary: string;
+  gapsCount: number;
+  ranAt?: string;
+  repositoryId?: string;
+  skipped?: boolean;
+  skipReason?: string;
+}
+
 export interface Project {
   _id: string;
   name: string;
   description?: string;
   status?: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
   uiLibraryIds: (string | UILibrary)[];
+  repositoryId?: string | Repository;
   prdText?: string;
   expectedCases: ExpectedCase[];
   casesGeneratedFrom: 'prd' | 'image' | 'manual' | null;
@@ -286,6 +339,56 @@ export function useApi() {
     });
   }
 
+  // Repository Operations
+  async function createRepository(data: { 
+    name: string; 
+    description?: string; 
+    githubRepoFullName: string;
+    githubBranch: string;
+  }): Promise<Repository> {
+    return apiFetch('/repositories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async function getAllRepositories(): Promise<Repository[]> {
+    return apiFetch('/repositories');
+  }
+
+  async function getRepository(id: string): Promise<Repository> {
+    return apiFetch(`/repositories/${id}`);
+  }
+
+  async function getRepositoryClusters(id: string, search?: string): Promise<{ 
+    clusters: RepoFeatureCluster[]; 
+    total: number; 
+  }> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const queryString = params.toString();
+    return apiFetch(`/repositories/${id}/clusters${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async function updateRepository(id: string, data: { name?: string; description?: string }): Promise<Repository> {
+    return apiFetch(`/repositories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async function deleteRepository(id: string): Promise<void> {
+    return apiFetch(`/repositories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async function reindexRepository(id: string): Promise<{ message: string }> {
+    return apiFetch(`/repositories/${id}/reindex`, {
+      method: 'POST',
+    });
+  }
+
   return {
     githubSessionId,
     getGithubAuthUrl,
@@ -315,5 +418,13 @@ export function useApi() {
     updateReview,
     deleteReview,
     reAnalyzeReview,
+
+    createRepository,
+    getAllRepositories,
+    getRepository,
+    getRepositoryClusters,
+    updateRepository,
+    deleteRepository,
+    reindexRepository,
   };
 }

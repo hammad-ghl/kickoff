@@ -43,6 +43,7 @@ export const ANALYSIS_PHASES = [
   { key: 'generating_cases', label: 'Generate Cases' },
   { key: 'checking_cases', label: 'Check Coverage' },
   { key: 'mapping_components', label: 'Map Components' },
+  { key: 'impact_analysis', label: 'Impact Analysis' },
   { key: 'completed', label: 'Complete' },
   { key: 'failed', label: 'Failed' },
 ] as const;

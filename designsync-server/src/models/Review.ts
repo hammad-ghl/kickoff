@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Types } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IBoundingBox {
   x: number;      // percentage from left (0-1)
@@ -26,7 +26,25 @@ export interface ICaseCheck {
   notes?: string;
 }
 
-export type AnalysisPhase = 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'completed' | 'failed';
+export type AnalysisPhase = 'pending' | 'generating_cases' | 'checking_cases' | 'mapping_components' | 'impact_analysis' | 'completed' | 'failed';
+
+export interface IRelatedFeature {
+  featureName: string;
+  relevance: string;
+  gap: string;
+  severity: 'high' | 'medium' | 'low';
+  files: string[];
+}
+
+export interface IImpactAnalysis {
+  relatedFeatures: IRelatedFeature[];
+  summary: string;
+  gapsCount: number;
+  ranAt: Date;
+  repositoryId?: string;
+  skipped?: boolean;
+  skipReason?: string;
+}
 
 export interface IReview extends Document {
   projectId: Types.ObjectId;
@@ -36,6 +54,7 @@ export interface IReview extends Document {
   analysisPhase: AnalysisPhase;
   caseChecks: ICaseCheck[];
   componentChecks: IComponentCheck[];
+  impactAnalysis?: IImpactAnalysis;
   analysisError?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -84,11 +103,26 @@ const ReviewSchema: Schema = new Schema(
     designImages: [String],
     analysisPhase: {
       type: String,
-      enum: ['pending', 'generating_cases', 'checking_cases', 'mapping_components', 'completed', 'failed'],
+      enum: ['pending', 'generating_cases', 'checking_cases', 'mapping_components', 'impact_analysis', 'completed', 'failed'],
       default: 'pending',
     },
     caseChecks: [CaseCheckSchema],
     componentChecks: [ComponentCheckSchema],
+    impactAnalysis: {
+      relatedFeatures: [{
+        featureName: { type: String, required: true },
+        relevance: { type: String, required: true },
+        gap: { type: String, required: true },
+        severity: { type: String, enum: ['high', 'medium', 'low'], required: true },
+        files: [{ type: String }],
+      }],
+      summary: { type: String },
+      gapsCount: { type: Number, default: 0 },
+      ranAt: { type: Date },
+      repositoryId: { type: String },
+      skipped: { type: Boolean },
+      skipReason: { type: String },
+    },
     analysisError: String,
   },
   { timestamps: true }

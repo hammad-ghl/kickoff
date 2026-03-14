@@ -41,21 +41,20 @@
         </div>
       </div>
 
-      <!-- Analysis Progress Tracker -->
-      <div class="flex-shrink-0 px-6 py-6 border-b border-border bg-tertiary">
-        <div class="max-w-5xl mx-auto">
-          <div class="grid grid-cols-5 gap-3">
+      <!-- Analysis Progress Tracker - Only show when not completed -->
+      <div v-if="review.analysisPhase !== 'completed' && review.analysisPhase !== 'failed'" class="flex-shrink-0 px-6 py-6 border-b border-border bg-tertiary">
+        <div class="max-w-6xl mx-auto">
+          <div class="grid grid-cols-5 gap-4">
             <div 
-              v-for="(phase, index) in ANALYSIS_PHASES_DISPLAY"
+              v-for="(phase, index) in analysisSteps"
               :key="phase.key"
               class="relative"
             >
               <!-- Progress Card -->
               <div 
-                class="card p-4 transition-all duration-300 relative overflow-hidden min-w-[180px]"
+                class="card p-4 transition-all duration-300 relative overflow-hidden"
                 :class="{
                   'bg-brand-primary/10 border-brand-primary': isPhaseActive(phase.key),
-                  'bg-green-900/10 border-green-600': isPhaseCompleted(phase.key) && review.analysisPhase === 'completed',
                   'opacity-50': !isPhaseActive(phase.key) && !isPhaseCompleted(phase.key)
                 }"
               >
@@ -79,9 +78,13 @@
                     class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 relative"
                     :class="getModernPhaseIconClass(phase.key)"
                   >
-                    <!-- Spinning loader for active phase - perfectly circular -->
+                    <!-- Completed checkmark -->
+                    <div v-if="isPhaseCompleted(phase.key)" class="absolute inset-0 flex items-center justify-center">
+                      <CheckCircle :size="20" class="text-success" />
+                    </div>
+                    <!-- Spinning loader for active phase -->
                     <div 
-                      v-if="isPhaseActive(phase.key)"
+                      v-else-if="isPhaseActive(phase.key)"
                       class="absolute inset-0 rounded-full"
                     >
                       <svg class="w-full h-full animate-spin" viewBox="0 0 24 24" fill="none">
@@ -98,7 +101,8 @@
                         />
                       </svg>
                     </div>
-                    <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Regular icon for pending phases -->
+                    <svg v-else class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path :d="getPhaseIconPath(phase.key)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                     </svg>
                   </div>
@@ -116,30 +120,55 @@
                     </p>
                     <!-- Active status text -->
                     <p 
-                      v-if="isPhaseActive(phase.key) && review.analysisPhase !== 'completed' && review.analysisPhase !== 'failed'"
+                      v-if="isPhaseActive(phase.key)"
                       class="text-[10px] text-brand-primary font-medium mt-1.5 animate-pulse"
                     >
                       Processing...
                     </p>
                   </div>
                 </div>
-                
-                <!-- Status indicator -->
-                <div 
-                  v-if="isPhaseCompleted(phase.key) && review.analysisPhase === 'completed'"
-                  class="absolute top-3 right-3"
-                >
-                  <CheckCircle :size="14" class="text-green-500" />
-                </div>
               </div>
               
               <!-- Connector Line -->
               <div 
-                v-if="index < ANALYSIS_PHASES_DISPLAY.length - 1"
-                class="absolute top-8 -right-2 w-4 h-0.5 bg-border z-0"
-                :class="{ 'bg-brand-primary': isPhaseCompleted(phase.key) }"
+                v-if="index < analysisSteps.length - 1"
+                class="absolute top-8 -right-3 w-6 h-0.5 bg-border z-0"
+                :class="{ 'bg-success': isPhaseCompleted(phase.key) }"
               ></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Overview - Show when completed -->
+      <div v-else-if="review.analysisPhase === 'completed'" class="flex-shrink-0 px-6 py-6 border-b border-border bg-tertiary">
+        <div class="mx-auto flex justify-between">
+          <div class="flex flex-1 items-center mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                <CheckCircle :size="20" class="text-success" />
+              </div>
+              <div>
+                <h3 class="text-[16px] font-semibold text-primary">Analysis Complete</h3>
+                <p class="text-[12px] text-secondary">Review finished successfully</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-4 flex-2 gap-4">
+            <div 
+              v-for="stat in completionStats" 
+              :key="stat.label"
+              class="card p-4"
+            >
+              <p class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">{{ stat.label }}</p>
+              <p class="text-2xl font-semibold" :class="stat.colorClass">{{ stat.value }}</p>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-end justify-center gap-1">
+            <p class="text-xs text-secondary">Last updated</p>
+            <p class="text-xl text-primary">{{ formatDate(review.updatedAt) }}</p>
           </div>
         </div>
       </div>
@@ -155,17 +184,35 @@
       <!-- Main 3-Pane Layout -->
       <div class="flex-1 flex min-h-0">
         <!-- Left Pane: Case Coverage -->
-        <div class="w-1/3 flex flex-col border-r border-border-light bg-tertiary  h-[calc(100vh-210px)]">
+        <div class="w-1/3 flex flex-col border-r border-border-light bg-tertiary  h-[calc(100vh-210px)] relative">
           <div class="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
             <h3 class="text-[14px] font-medium text-primary">Case Coverage ({{ filteredCaseChecks.length }})</h3>
             <div class="w-36">
-              <CustomDropdown
-                v-model="caseFilter"
-                :options="caseFilterOptions"
-                placeholder="All Cases"
-              />
+              <select 
+                v-model="caseFilter" 
+                class="input text-[13px] py-1.5"
+              >
+                <option value="">All Cases</option>
+                <option value="covered">Covered</option>
+                <option value="partial">Partial</option>
+                <option value="missing">Missing</option>
+                <option value="unclear">Unclear</option>
+                <option value="pending">Pending</option>
+              </select>
             </div>
           </div>
+          
+          <!-- Loading Modal Overlay for checking_cases phase -->
+          <div v-if="isPhaseActive('checking_cases')" class="absolute inset-0 z-10 flex items-center justify-center bg-primary/60">
+            <div class="card p-8 flex flex-col items-center border border-border-light shadow-2xl">
+              <div class="w-20 h-20 mb-4 animate-spin-slow">
+                <img src="../assets/cube.svg" alt="Loading" class="w-full h-full" />
+              </div>
+              <p class="text-[14px] text-primary font-medium mb-2">Checking Coverage</p>
+              <p class="text-[12px] text-secondary text-center">Analyzing design against test cases...</p>
+            </div>
+          </div>
+          
           <div v-if="review.caseChecks.length === 0" class="p-4 text-secondary text-sm">
             No test cases generated yet.
             <span v-if="isPhaseActive('generating_cases')"> Generating cases...</span>
@@ -239,78 +286,218 @@
           </div>
         </div>
 
-        <!-- Right Pane: Component Checks -->
-        <div class="w-1/3 flex flex-col bg-tertiary h-[calc(100vh-210px)] overflow-y-auto">
-          <div class="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
-            <h3 class="text-[14px] font-medium text-primary">Components ({{ filteredComponentChecks.length }})</h3>
-            <div class="w-36">
-              <CustomDropdown
-                v-model="componentFilter"
-                :options="componentFilterOptions"
-                placeholder="All Components"
-              />
-            </div>
-          </div>
-          <!-- Helper text -->
-          <div v-if="selectedComponent" class="px-4 py-2 bg-brand-primary/10 border-b border-brand-primary/30 text-[11px] text-brand-primary flex items-center justify-between">
-            <span>Showing only selected component's marking</span>
+        <!-- Right Pane: Component Checks & Impact Analysis (Tabbed) -->
+        <div class="w-1/3 flex flex-col bg-tertiary h-[calc(100vh-210px)] overflow-y-auto relative">
+          <!-- Tabs -->
+          <div class="flex border-b border-border flex-shrink-0">
             <button 
-              @click="selectedComponent = null" 
-              class="text-[10px] underline hover:no-underline"
+              @click="rightPaneTab = 'components'"
+              class="flex-1 px-4 py-3 text-[13px] font-medium transition-colors relative"
+              :class="rightPaneTab === 'components' ? 'text-primary' : 'text-secondary hover:text-primary'"
             >
-              Clear selection
+              Components ({{ filteredComponentChecks.length }})
+              <div v-if="rightPaneTab === 'components'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"></div>
+            </button>
+            <button 
+              @click="rightPaneTab = 'impact'"
+              class="flex-1 px-4 py-3 text-[13px] font-medium transition-colors relative"
+              :class="rightPaneTab === 'impact' ? 'text-primary' : 'text-secondary hover:text-primary'"
+            >
+              Impact Analysis 
+              <span v-if="review.impactAnalysis?.gapsCount" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]" :class="review.impactAnalysis.gapsCount > 0 ? 'bg-error-bg text-error' : 'bg-success-bg text-success'">
+                {{ review.impactAnalysis.gapsCount }}
+              </span>
+              <div v-if="rightPaneTab === 'impact'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"></div>
             </button>
           </div>
-          <div v-if="!review.componentChecks || review.componentChecks.length === 0" class="p-4 text-secondary text-sm">
-            No components mapped yet.
-            <span v-if="isPhaseActive('mapping_components')"> Mapping components...</span>
-          </div>
-          <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low pb-[200px]">
-            <div 
-              v-for="comp in filteredComponentChecks"
-              :key="comp.componentName"
-              class="px-4 py-3 cursor-pointer hover:bg-hover transition-colors"
-              :class="getComponentBgClass(comp)"
-              @click="handleComponentClick(comp.componentName)"
-            >
-              <div class="flex items-center gap-3">
-                <div class="w-5 h-5 flex-shrink-0">
-                  <component :is="getComponentStatusIcon(comp)" class="w-5 h-5" />
-                </div>
-                <span class="text-sm font-medium flex-1" :class="selectedComponent === comp.componentName ? 'text-brand-primary' : 'text-primary'">
-                  {{ comp.componentName }}
-                </span>
-                <!-- Selected indicator -->
-                <span 
-                  v-if="selectedComponent === comp.componentName"
-                  class="chip bg-brand-primary/20 text-brand-primary border border-brand-primary text-[10px] font-semibold"
+
+          <!-- Components Tab Content -->
+          <template v-if="rightPaneTab === 'components'">
+            <div class="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+              <div class="w-36">
+                <select 
+                  v-model="componentFilter" 
+                  class="input text-[13px] py-1.5"
                 >
-                  Selected
-                </span>
-                <span 
-                  v-if="comp.propsMissing?.length || comp.slotsMissing?.length"
-                  class="chip chip-orange text-[10px]"
-                >
-                  Missing: {{ (comp.propsMissing?.length || 0) + (comp.slotsMissing?.length || 0) }}
-                </span>
-                <span v-if="comp.exists && !comp.hasIssue && (comp.propsMissing?.length === 0 && comp.slotsMissing?.length === 0)" class="chip chip-green text-[10px]">
-                  OK
-                </span>
-                <span v-if="!comp.exists" class="chip chip-red text-[10px]">
-                  Missing
-                </span>
-              </div>
-              <div v-if="comp.hasIssue && comp.issueDescription" class="text-xs text-red-400 mt-2 ml-8">
-                Issue: {{ comp.issueDescription }}
-              </div>
-              <div v-if="comp.propsMissing?.length" class="text-xs text-orange-400 mt-1 ml-8">
-                Missing Props: {{ comp.propsMissing.join(', ') }}
-              </div>
-              <div v-if="comp.slotsMissing?.length" class="text-xs text-orange-400 mt-1 ml-8">
-                Missing Slots: {{ comp.slotsMissing.join(', ') }}
+                  <option value="">All</option>
+                  <option value="exists">Exists</option>
+                  <option value="missing">Missing</option>
+                  <option value="hasIssue">Has Issues</option>
+                </select>
               </div>
             </div>
-          </div>
+            <!-- Helper text -->
+            <div v-if="selectedComponent" class="px-4 py-2 bg-brand-primary/10 border-b border-brand-primary/30 text-[11px] text-brand-primary flex items-center justify-between">
+              <span>Showing only selected component's marking</span>
+              <button 
+                @click="selectedComponent = null" 
+                class="text-[10px] underline hover:no-underline"
+              >
+                Clear selection
+              </button>
+            </div>
+            
+            <!-- Loading Modal Overlay for mapping_components phase -->
+            <div v-if="isPhaseActive('mapping_components')" class="absolute inset-0 z-10 flex items-center justify-center bg-primary/60 backdrop-blur-[2px]">
+              <div class="card p-8 flex flex-col items-center border border-border-light shadow-3xl">
+                <div class="w-20 h-20 mb-4 animate-spin-slow">
+                  <img src="../assets/cube.svg" alt="Loading" class="w-full h-full" />
+                </div>
+                <p class="text-[14px] text-primary font-medium mb-2">Mapping Components</p>
+                <p class="text-[12px] text-secondary text-center">Analyzing design components...</p>
+              </div>
+            </div>
+            
+            <div v-if="!review.componentChecks || review.componentChecks.length === 0" class="p-4 text-secondary text-sm">
+              No components mapped yet.
+            </div>
+            <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low pb-[200px]">
+              <div 
+                v-for="comp in filteredComponentChecks"
+                :key="comp.componentName"
+                class="px-4 py-3 cursor-pointer hover:bg-hover transition-colors"
+                :class="getComponentBgClass(comp)"
+                @click="handleComponentClick(comp.componentName)"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="w-5 h-5 flex-shrink-0">
+                    <component :is="getComponentStatusIcon(comp)" class="w-5 h-5" />
+                  </div>
+                  <span class="text-sm font-medium flex-1" :class="selectedComponent === comp.componentName ? 'text-brand-primary' : 'text-primary'">
+                    {{ comp.componentName }}
+                  </span>
+                  <!-- Selected indicator -->
+                  <span 
+                    v-if="selectedComponent === comp.componentName"
+                    class="chip bg-brand-primary/20 text-brand-primary border border-brand-primary text-[10px] font-semibold"
+                  >
+                    Selected
+                  </span>
+                  <span 
+                    v-if="comp.propsMissing?.length || comp.slotsMissing?.length"
+                    class="chip chip-orange text-[10px]"
+                  >
+                    Missing: {{ (comp.propsMissing?.length || 0) + (comp.slotsMissing?.length || 0) }}
+                  </span>
+                  <span v-if="comp.exists && !comp.hasIssue && (comp.propsMissing?.length === 0 && comp.slotsMissing?.length === 0)" class="chip chip-green text-[10px]">
+                    OK
+                  </span>
+                  <span v-if="!comp.exists" class="chip chip-red text-[10px]">
+                    Missing
+                  </span>
+                </div>
+                <div v-if="comp.hasIssue && comp.issueDescription" class="text-xs text-red-400 mt-2 ml-8">
+                  Issue: {{ comp.issueDescription }}
+                </div>
+                <div v-if="comp.propsMissing?.length" class="text-xs text-orange-400 mt-1 ml-8">
+                  Missing Props: {{ comp.propsMissing.join(', ') }}
+                </div>
+                <div v-if="comp.slotsMissing?.length" class="text-xs text-orange-400 mt-1 ml-8">
+                  Missing Slots: {{ comp.slotsMissing.join(', ') }}
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Impact Analysis Tab Content -->
+          <template v-if="rightPaneTab === 'impact'">
+            <!-- No repository connected -->
+            <div v-if="review.impactAnalysis?.skipped" class="p-6 text-center">
+              <div class="w-12 h-12 rounded-full bg-tertiary flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                </svg>
+              </div>
+              <p class="text-[14px] text-secondary mb-1">{{ review.impactAnalysis.skipReason || 'Impact analysis was skipped' }}</p>
+              <p class="text-[12px] text-tertiary">
+                Edit the feature to select a repository and enable codebase-aware impact analysis.
+              </p>
+            </div>
+            
+            <!-- Still analyzing -->
+            <div v-else-if="isPhaseActive('impact_analysis')" class="p-6 text-center">
+              <div class="w-8 h-8 border-2 animate-spin rounded-full mx-auto mb-3" style="border-color: var(--color-border-primary); border-top-color: var(--color-brand-primary);"></div>
+              <p class="text-[14px] text-secondary">Analyzing impact against codebase...</p>
+            </div>
+            
+            <!-- No impact analysis yet -->
+            <div v-else-if="!review.impactAnalysis" class="p-6 text-center">
+              <div class="w-12 h-12 rounded-full bg-tertiary flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p class="text-[14px] text-secondary">Impact analysis pending</p>
+              <p class="text-[12px] text-tertiary mt-1">This will run after component mapping completes.</p>
+            </div>
+            
+            <!-- No gaps found -->
+            <div v-else-if="review.impactAnalysis.gapsCount === 0" class="p-6 text-center">
+              <div class="w-12 h-12 rounded-full bg-success-bg flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p class="text-[14px] text-primary font-medium mb-1">No gaps detected</p>
+              <p class="text-[12px] text-secondary">
+                The PRD appears to address all related existing features adequately.
+              </p>
+            </div>
+            
+            <!-- Gaps found -->
+            <div v-else class="flex-1 overflow-y-auto">
+              <div class="p-4 border-b border-border">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg font-medium text-error">{{ review.impactAnalysis.gapsCount }}</span>
+                  <span class="text-[14px] text-primary">gaps detected</span>
+                </div>
+                <p class="text-[13px] text-secondary">{{ review.impactAnalysis.summary }}</p>
+              </div>
+              
+              <div class="divide-y divide-border-low pb-[200px]">
+                <div 
+                  v-for="(gap, index) in review.impactAnalysis.relatedFeatures"
+                  :key="index"
+                  class="p-4"
+                >
+                  <div class="flex items-start gap-3">
+                    <div 
+                      class="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 mt-0.5"
+                      :class="getSeverityBgClass(gap.severity)"
+                    >
+                      <svg class="w-4 h-4" :class="getSeverityTextClass(gap.severity)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[14px] font-medium text-primary">{{ gap.featureName }}</span>
+                        <span 
+                          class="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase"
+                          :class="getSeverityBadgeClass(gap.severity)"
+                        >
+                          {{ gap.severity }}
+                        </span>
+                      </div>
+                      <p class="text-[13px] text-secondary mb-2">"{{ gap.gap }}"</p>
+                      <div v-if="gap.files?.length" class="flex flex-wrap gap-1">
+                        <span 
+                          v-for="file in gap.files.slice(0, 3)"
+                          :key="file"
+                          class="px-1.5 py-0.5 bg-tertiary rounded text-[10px] text-secondary font-mono"
+                        >
+                          {{ file.split('/').pop() }}
+                        </span>
+                        <span v-if="gap.files.length > 3" class="px-1.5 py-0.5 text-[10px] text-tertiary">
+                          +{{ gap.files.length - 3 }} more
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -429,16 +616,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { useApi, type Review, type IComponentCheck } from '../composables/useApi';
 import { formatDate, getAnalysisPhaseLabel, ANALYSIS_PHASES, getAnalysisPhaseClass } from '../constants';
 import Modal from '../components/Modal.vue';
-import CustomDropdown, { type DropdownOption } from '../components/CustomDropdown.vue';
 import { 
   CheckCircle, 
   XCircle, 
   AlertCircle, 
   HelpCircle, 
   Clock,
-  List,
-  Folder,
-  Filter
+  Folder
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -465,6 +649,7 @@ const addingDesignImage = ref(false);
 const showReanalyzeModal = ref(false);
 const showDeleteModal = ref(false);
 const expandedImage = ref(false);
+const rightPaneTab = ref<'components' | 'impact'>('components');
 
 // Icon components with consistent colors using Lucide
 const StatusIconCovered = () => h(CheckCircle, { class: 'text-green-500' });
@@ -473,24 +658,6 @@ const StatusIconMissing = () => h(XCircle, { class: 'text-red-500' });
 const StatusIconUnclear = () => h(HelpCircle, { class: 'text-yellow-500' });
 const StatusIconPending = () => h(Clock, { class: 'text-blue-500' });
 const StatusIconWarning = () => h(Folder, { class: 'text-orange-500' });
-const IconList = () => h(List);
-const IconFilter = () => h(Filter);
-
-const caseFilterOptions: DropdownOption[] = [
-  { value: '', label: 'All Cases', icon: IconFilter },
-  { value: 'covered', label: 'Covered', icon: StatusIconCovered },
-  { value: 'partial', label: 'Partial', icon: StatusIconPartial },
-  { value: 'missing', label: 'Missing', icon: StatusIconMissing },
-  { value: 'unclear', label: 'Unclear', icon: StatusIconUnclear },
-  { value: 'pending', label: 'Pending', icon: StatusIconPending },
-];
-
-const componentFilterOptions: DropdownOption[] = [
-  { value: '', label: 'All', icon: IconFilter },
-  { value: 'exists', label: 'Exists', icon: StatusIconCovered },
-  { value: 'missing', label: 'Missing', icon: StatusIconMissing },
-  { value: 'hasIssue', label: 'Has Issues', icon: StatusIconWarning },
-];
 
 const getCaseStatusIcon = (status: string) => {
   switch (status) {
@@ -542,11 +709,56 @@ const ANALYSIS_PHASES_DISPLAY = [
     description: 'Matching UI components to library'
   },
   { 
+    key: 'impact_analysis', 
+    label: 'Impact Analysis',
+    description: 'Checking PRD against codebase'
+  },
+  { 
     key: 'completed', 
     label: 'Completed',
     description: 'Analysis finished successfully'
   },
 ];
+
+// Steps to show in progress tracker (without completed)
+const analysisSteps = computed(() => {
+  return ANALYSIS_PHASES_DISPLAY.filter(p => p.key !== 'completed' && p.key !== 'failed');
+});
+
+// Calculate case coverage percentage
+const caseCoveragePercent = computed(() => {
+  if (!review.value?.caseChecks || review.value.caseChecks.length === 0) return 0;
+  const covered = review.value.caseChecks.filter(c => c.status === 'covered').length;
+  return Math.round((covered / review.value.caseChecks.length) * 100);
+});
+
+// Completion statistics
+const completionStats = computed(() => {
+  if (!review.value) return [];
+  
+  return [
+    {
+      label: 'Test Cases',
+      value: review.value.caseChecks?.length || 0,
+      colorClass: 'text-primary',
+    },
+    {
+      label: 'Coverage',
+      value: `${caseCoveragePercent.value}%`,
+      colorClass: 'text-success',
+    },
+    {
+      label: 'Components',
+      value: review.value.componentChecks?.length || 0,
+      colorClass: 'text-primary',
+    },
+    {
+      label: 'Impact Items',
+      value: review.value.impactAnalysis?.gapsCount || 0,
+      colorClass: 'text-primary',
+    },
+  ];
+});
 
 const filteredCaseChecks = computed(() => {
   if (!review.value?.caseChecks) return [];
@@ -604,6 +816,7 @@ const getPhaseIconPath = (phase: string) => {
     case 'generating_cases': return 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4';
     case 'checking_cases': return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
     case 'mapping_components': return 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h14a2 2 0 012 2v12a4 4 0 01-4 4h-3M5 11h14M12 3v18';
+    case 'impact_analysis': return 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4';
     case 'completed': return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
     case 'failed': return 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z';
     default: return '';
@@ -613,16 +826,12 @@ const getPhaseIconPath = (phase: string) => {
 const getModernPhaseIconClass = (phase: string) => {
   const currentPhase = review.value?.analysisPhase;
   
-  if (currentPhase === 'completed' && phase === 'completed') {
-    return 'bg-green-600 text-white';
-  }
-  
   if (currentPhase === 'failed' && phase === 'failed') {
     return 'bg-red-600 text-white';
   }
   
   if (isPhaseCompleted(phase)) {
-    return 'bg-brand-primary/20 text-brand-primary';
+    return 'bg-tertiary text-secondary';
   }
   
   if (isPhaseActive(phase)) {
@@ -700,6 +909,33 @@ const getComponentBgClass = (comp: IComponentCheck) => {
   return baseClasses.join(' ');
 };
 
+const getSeverityBgClass = (severity: string) => {
+  switch (severity) {
+    case 'high': return 'bg-error-bg';
+    case 'medium': return 'bg-warning-bg';
+    case 'low': return 'bg-muted-bg';
+    default: return 'bg-tertiary';
+  }
+};
+
+const getSeverityTextClass = (severity: string) => {
+  switch (severity) {
+    case 'high': return 'text-error';
+    case 'medium': return 'text-warning';
+    case 'low': return 'text-muted';
+    default: return 'text-secondary';
+  }
+};
+
+const getSeverityBadgeClass = (severity: string) => {
+  switch (severity) {
+    case 'high': return 'bg-error-bg text-error';
+    case 'medium': return 'bg-warning-bg text-warning';
+    case 'low': return 'bg-muted-bg text-muted';
+    default: return 'bg-tertiary text-secondary';
+  }
+};
+
 const handleComponentClick = (componentName: string) => {
   // Toggle selection: if already selected, deselect; otherwise select
   if (selectedComponent.value === componentName) {
@@ -712,7 +948,7 @@ const handleComponentClick = (componentName: string) => {
 watch(() => review.value?.analysisPhase, (newPhase, oldPhase) => {
   if (newPhase && newPhase !== oldPhase) {
     // Poll for updates if analysis is in progress
-    if (['generating_cases', 'checking_cases', 'mapping_components'].includes(newPhase)) {
+    if (['pending', 'generating_cases', 'checking_cases', 'mapping_components', 'impact_analysis'].includes(newPhase)) {
       startPolling();
     } else {
       stopPolling();
@@ -726,7 +962,7 @@ const POLLING_INTERVAL = 3000; // Poll every 3 seconds
 const startPolling = () => {
   if (pollInterval) return;
   pollInterval = setInterval(async () => {
-    if (review.value && ['generating_cases', 'checking_cases', 'mapping_components'].includes(review.value.analysisPhase)) {
+    if (review.value && ['pending', 'generating_cases', 'checking_cases', 'mapping_components', 'impact_analysis'].includes(review.value.analysisPhase)) {
       await refreshReview();
     } else {
       stopPolling();
@@ -750,7 +986,7 @@ async function loadReview() {
   try {
     const fetchedReview = await getReview(reviewId);
     review.value = fetchedReview;
-    projectId.value = fetchedReview.projectId; // Set projectId from fetched review
+    projectId.value = typeof fetchedReview.projectId === 'string' ? fetchedReview.projectId : fetchedReview.projectId._id;
     // Ensure review.analysisError is defined to avoid template errors
     if (!review.value.analysisError) {
       review.value.analysisError = undefined;
@@ -798,7 +1034,8 @@ async function confirmDelete() {
 
   try {
     await deleteReview(reviewId);
-    router.push(`/features/${review.value.projectId}`);
+    const pid = typeof review.value.projectId === 'string' ? review.value.projectId : review.value.projectId._id;
+    router.push(`/features/${pid}`);
   } catch (err) {
     console.error('Failed to delete review:', err);
     alert((err as Error).message || 'Failed to delete review');
@@ -806,8 +1043,8 @@ async function confirmDelete() {
 }
 
 function goBack() {
-  if (projectId.value?._id) {
-    router.push(`/features/${projectId.value?._id}`);
+  if (projectId.value) {
+    router.push(`/features/${projectId.value}`);
   } else {
     router.push('/features');
   }
@@ -880,11 +1117,24 @@ async function submitNewDesignImage() {
   }
 }
 
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .animate-progress-bar {
   animation: progress-bar 1.5s ease-in-out infinite;
 }
 
 .animate-pulse-slow {
   animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
 }
 </style>

@@ -11,6 +11,7 @@ export interface IProject extends Document {
   description?: string;
   status: 'draft' | 'prd_complete' | 'ready_for_design' | 'in_design' | 'in_design_review' | 'ready_for_kickoff';
   uiLibraryIds: Types.ObjectId[];
+  repositoryId?: Types.ObjectId;
   prdText?: string;
   expectedCases: IExpectedCase[];
   casesGeneratedFrom: 'prd' | 'image' | 'manual' | null;
@@ -41,6 +42,10 @@ const ProjectSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'UILibrary',
     }],
+    repositoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Repository',
+    },
     prdText: { type: String },
     expectedCases: [ExpectedCaseSchema],
     casesGeneratedFrom: { 

@@ -1,54 +1,98 @@
 <template>
   <div class="relative" ref="dropdownRef">
     <button
+      type="button"
       @click="toggleDropdown"
-      class="custom-dropdown-trigger"
-      :class="{ 'active': isOpen }"
+      class="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border transition-colors text-left"
+      :class="[
+        isOpen ? 'border-brand-primary bg-brand-active-bg' : 'border-border bg-tertiary hover:bg-hover',
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      ]"
+      :disabled="disabled"
     >
-      <div class="flex items-center gap-2 flex-1">
-        <component 
-          v-if="selectedOption?.icon" 
-          :is="selectedOption.icon" 
-          class="w-4 h-4 flex-shrink-0"
-        />
-        <span class="text-sm">{{ selectedOption?.label || placeholder }}</span>
+      <div class="flex-1 min-w-0">
+        <div v-if="selectedItems.length > 0" class="flex flex-wrap gap-2">
+          <span 
+            v-for="item in selectedItems" 
+            :key="item.id"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] bg-brand-primary text-white"
+          >
+            {{ item.label }}
+            <button
+              v-if="multiple"
+              type="button"
+              @click.stop="removeItem(item.id)"
+              class="hover:text-error transition-colors"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        </div>
+        <span v-else class="text-[14px] text-secondary">{{ placeholder }}</span>
       </div>
       <svg 
-        class="w-4 h-4 text-secondary transition-transform duration-200 flex-shrink-0" 
+        class="w-4 h-4 text-secondary transition-transform flex-shrink-0" 
         :class="{ 'rotate-180': isOpen }"
         fill="none" 
         stroke="currentColor" 
         viewBox="0 0 24 24"
       >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
       </svg>
     </button>
-    
-    <Transition name="dropdown">
-      <div v-if="isOpen" class="custom-dropdown-menu">
-        <button
-          v-for="option in options"
-          :key="option.value"
-          @click="selectOption(option)"
-          class="custom-dropdown-item"
-          :class="{ 'selected': modelValue === option.value }"
-        >
-          <component 
-            v-if="option.icon" 
-            :is="option.icon" 
-            class="w-4 h-4 flex-shrink-0"
-          />
-          <span class="flex-1 text-left">{{ option.label }}</span>
-          <svg 
-            v-if="modelValue === option.value"
-            class="w-4 h-4 text-brand-primary flex-shrink-0" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
+
+    <Transition
+      enter-active-class="transition ease-out duration-100"
+      enter-from-class="transform opacity-0 scale-95"
+      enter-to-class="transform opacity-100 scale-100"
+      leave-active-class="transition ease-in duration-75"
+      leave-from-class="transform opacity-100 scale-100"
+      leave-to-class="transform opacity-0 scale-95"
+    >
+      <div
+        v-if="isOpen"
+        class="absolute z-50 w-full mt-2 bg-secondary border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto"
+      >
+        <div v-if="items.length === 0" class="px-4 py-3 text-[14px] text-secondary text-center">
+          {{ emptyMessage }}
+        </div>
+        <div v-else class="py-1">
+          <button
+            v-for="item in items"
+            :key="item.id"
+            type="button"
+            @click="selectItem(item)"
+            class="w-full px-4 py-2.5 text-left hover:bg-hover transition-colors flex items-start gap-3"
+            :class="[
+              isSelected(item.id) ? 'bg-brand-active-bg' : '',
+              item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+            ]"
+            :disabled="item.disabled"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-        </button>
+            <div 
+              v-if="multiple"
+              class="w-4 h-4 mt-0.5 flex-shrink-0 rounded border transition-colors"
+              :class="isSelected(item.id) ? 'bg-brand-primary border-brand-primary' : 'border-border'"
+            >
+              <svg v-if="isSelected(item.id)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div 
+              v-else
+              class="w-4 h-4 mt-0.5 flex-shrink-0 rounded-full border transition-colors"
+              :class="isSelected(item.id) ? 'border-brand-primary' : 'border-border'"
+            >
+              <div v-if="isSelected(item.id)" class="w-full h-full rounded-full bg-brand-primary scale-50"></div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[14px] text-primary">{{ item.label }}</div>
+              <div v-if="item.description" class="text-[12px] text-secondary mt-0.5">{{ item.description }}</div>
+            </div>
+          </button>
+        </div>
       </div>
     </Transition>
   </div>
@@ -57,41 +101,83 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
-export interface DropdownOption {
-  value: string;
+export interface DropdownItem {
+  id: string;
   label: string;
-  icon?: any;
+  description?: string;
+  disabled?: boolean;
 }
 
 const props = defineProps<{
-  modelValue: string;
-  options: DropdownOption[];
+  items: DropdownItem[];
+  modelValue: string | string[] | undefined;
+  multiple?: boolean;
   placeholder?: string;
+  emptyMessage?: string;
+  disabled?: boolean;
 }>();
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  'update:modelValue': [value: string | string[] | undefined];
+}>();
 
 const isOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
 
-const selectedOption = computed(() => 
-  props.options.find(opt => opt.value === props.modelValue)
-);
+const selectedItems = computed(() => {
+  if (!props.modelValue) return [];
+  
+  const ids = Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue];
+  return props.items.filter(item => ids.includes(item.id));
+});
 
-const toggleDropdown = () => {
-  isOpen.value = !isOpen.value;
-};
+function isSelected(id: string): boolean {
+  if (!props.modelValue) return false;
+  return Array.isArray(props.modelValue) 
+    ? props.modelValue.includes(id) 
+    : props.modelValue === id;
+}
 
-const selectOption = (option: DropdownOption) => {
-  emit('update:modelValue', option.value);
-  isOpen.value = false;
-};
+function toggleDropdown() {
+  if (!props.disabled) {
+    isOpen.value = !isOpen.value;
+  }
+}
 
-const handleClickOutside = (event: MouseEvent) => {
+function selectItem(item: DropdownItem) {
+  if (item.disabled) return;
+
+  if (props.multiple) {
+    const currentValue = (props.modelValue as string[]) || [];
+    const index = currentValue.indexOf(item.id);
+    
+    if (index > -1) {
+      const newValue = [...currentValue];
+      newValue.splice(index, 1);
+      emit('update:modelValue', newValue);
+    } else {
+      emit('update:modelValue', [...currentValue, item.id]);
+    }
+  } else {
+    emit('update:modelValue', item.id);
+    isOpen.value = false;
+  }
+}
+
+function removeItem(id: string) {
+  if (props.multiple) {
+    const currentValue = (props.modelValue as string[]) || [];
+    emit('update:modelValue', currentValue.filter(v => v !== id));
+  } else {
+    emit('update:modelValue', undefined);
+  }
+}
+
+function handleClickOutside(event: MouseEvent) {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     isOpen.value = false;
   }
-};
+}
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
@@ -101,80 +187,3 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
-
-<style scoped>
-.custom-dropdown-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  background-color: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-tertiary);
-  border-radius: 0.5rem;
-  color: var(--color-text-primary);
-  font-size: 0.875rem;
-  transition: all 0.15s;
-  cursor: pointer;
-}
-
-.custom-dropdown-trigger:hover {
-  background-color: var(--color-bg-hover);
-  border-color: var(--color-border-secondary);
-}
-
-.custom-dropdown-trigger.active {
-  border-color: var(--color-brand-primary);
-  background-color: var(--color-bg-hover);
-}
-
-.custom-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  left: 0;
-  right: 0;
-  background-color: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  z-index: 50;
-  overflow: hidden;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.custom-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  color: var(--color-text-primary);
-  font-size: 0.875rem;
-  transition: all 0.15s;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  text-align: left;
-}
-
-.custom-dropdown-item:hover {
-  background-color: var(--color-bg-hover);
-}
-
-.custom-dropdown-item.selected {
-  background-color: rgba(135, 169, 255, 0.1);
-}
-
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-</style>

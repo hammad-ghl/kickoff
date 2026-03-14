@@ -31,7 +31,7 @@
     <div v-else class="flex-1 flex flex-col overflow-y-auto">
       <div class="flex-1 flex">
         <!-- Left Pane: Feature Info & UI Libraries -->
-        <div class="w-[480px] flex-shrink-0 overflow-y-auto">
+        <div class="w-[480px] flex-shrink-0">
           <div class="p-6 space-y-6">
             <!-- Feature Info Card -->
             <div class="card p-5 space-y-4">
@@ -62,7 +62,7 @@
                 <label class="block text-[14px] text-primary">Status</label>
                 <StatusDropdown
                   :current-status="form.status || 'draft'"
-                  @change="(newStatus) => form.status = newStatus"
+                  @change="(newStatus: string) => form.status = newStatus"
                 />
               </div>
             </div>
@@ -74,33 +74,41 @@
                 <router-link to="/ui-libraries/new" class="text-[13px] text-brand-primary hover:underline">+ Add New</router-link>
               </div>
               
-              <div v-if="availableUILibraries.length === 0 && !loadingUILibs" class="text-center py-4 text-secondary">
-                <p class="text-sm mb-2">No UI libraries available.</p>
-                <router-link to="/ui-libraries/new" class="text-[13px] text-brand-primary hover:underline">Add your first UI Library</router-link>
+              <div v-if="loadingUILibs" class="py-4 text-center text-secondary">
+                <div class="w-6 h-6 border-2 animate-spin rounded-full mx-auto" style="border-color: var(--color-border-primary); border-top-color: var(--color-brand-primary);"></div>
               </div>
-              <div v-else-if="loadingUILibs" class="py-4 text-center text-secondary">
-                Loading UI Libraries...
+              <div v-else>
+                <CustomDropdown
+                  v-model="form.uiLibraryIds"
+                  :items="uiLibraryDropdownItems"
+                  :multiple="true"
+                  placeholder="Select UI libraries..."
+                  empty-message="No UI libraries available. Add one to get started."
+                />
               </div>
-              <div v-else class="space-y-2">
-                <div 
-                  v-for="lib in availableUILibraries" 
-                  :key="lib._id"
-                  class="flex items-center gap-3 p-3 cursor-pointer rounded-lg transition-colors"
-                  :class="(form.uiLibraryIds || []).includes(lib._id) ? 'bg-brand-active-bg border border-brand-primary' : 'hover:bg-hover'"
-                  @click="toggleUILibrary(lib._id)"
-                >
-                  <input 
-                    type="checkbox" 
-                    :id="`ui-lib-${lib._id}`" 
-                    :value="lib._id" 
-                    v-model="form.uiLibraryIds"
-                    class="w-4 h-4 text-brand-primary bg-background border-border rounded focus:ring-brand-primary"
-                  >
-                  <label :for="`ui-lib-${lib._id}`" class="flex-1 text-primary text-sm cursor-pointer">
-                    {{ lib.name }}
-                    <p class="text-xs text-secondary">{{ lib.componentCount || 0 }} components</p>
-                  </label>
+            </div>
+
+            <!-- Repositories Card -->
+            <div class="card p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-[12px] font-medium text-secondary uppercase tracking-wider">Repository</h3>
+                  <p class="text-xs text-tertiary mt-1">Select a repository to enable Impact Analysis</p>
                 </div>
+                <router-link to="/repositories/new" class="text-[13px] text-brand-primary hover:underline">+ Add New</router-link>
+              </div>
+              
+              <div v-if="loadingRepos" class="py-4 text-center text-secondary">
+                <div class="w-6 h-6 border-2 animate-spin rounded-full mx-auto" style="border-color: var(--color-border-primary); border-top-color: var(--color-brand-primary);"></div>
+              </div>
+              <div v-else>
+                <CustomDropdown
+                  v-model="form.repositoryId"
+                  :items="repositoryDropdownItems"
+                  :multiple="false"
+                  placeholder="Select a repository..."
+                  empty-message="No repositories available. Connect one to enable Impact Analysis."
+                />
               </div>
             </div>
           </div>
@@ -242,12 +250,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useApi, type Project, type UILibrary } from '../composables/useApi';
+import { useApi, type Project, type UILibrary, type Repository } from '../composables/useApi';
 import { type FeatureStatus } from '../constants';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import StatusDropdown from './StatusDropdown.vue';
+import CustomDropdown, { type DropdownItem } from './CustomDropdown.vue';
 
 const props = defineProps<{
   projectId?: string;
@@ -255,24 +264,57 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { createProject, updateProject, getProject, getAllUILibraries, generateProjectCases } = useApi();
+const { createProject, updateProject, getProject, getAllUILibraries, getAllRepositories, generateProjectCases } = useApi();
 
 const isEditMode = computed(() => props.mode === 'edit');
 const backRoute = computed(() => isEditMode.value ? `/features/${props.projectId}` : '/features');
 
-const form = ref<Partial<Project>>({
+const uiLibraryDropdownItems = computed<DropdownItem[]>(() => {
+  return availableUILibraries.value.map(lib => ({
+    id: lib._id,
+    label: lib.name,
+    description: `${lib.componentCount || 0} components`,
+  }));
+});
+
+const repositoryDropdownItems = computed<DropdownItem[]>(() => {
+  return availableRepositories.value.map(repo => {
+    let description = '';
+    if (repo.status === 'indexed') {
+      description = `${repo.featureCount || 0} features`;
+    } else if (repo.status === 'indexing') {
+      description = 'Indexing...';
+    } else if (repo.status === 'failed') {
+      description = 'Indexing failed';
+    } else {
+      description = 'Pending';
+    }
+    
+    return {
+      id: repo._id,
+      label: repo.name,
+      description,
+      disabled: repo.status !== 'indexed',
+    };
+  });
+});
+
+const form = ref<Partial<Project> & { repositoryId?: string }>({
   name: '',
   description: '',
   status: 'draft',
   uiLibraryIds: [],
+  repositoryId: undefined,
   prdText: '',
   expectedCases: [],
   casesGeneratedFrom: null,
 });
 
 const availableUILibraries = ref<UILibrary[]>([]);
+const availableRepositories = ref<Repository[]>([]);
 const loading = ref(isEditMode.value);
 const loadingUILibs = ref(true);
+const loadingRepos = ref(true);
 const submitting = ref(false);
 const error = ref('');
 const success = ref('');
@@ -302,7 +344,7 @@ onMounted(async () => {
   if (isEditMode.value && props.projectId) {
     await loadProject();
   }
-  await loadUILibraries();
+  await Promise.all([loadUILibraries(), loadRepositories()])
 });
 
 onBeforeUnmount(() => {
@@ -318,6 +360,7 @@ async function loadProject() {
       description: project.description || '',
       status: project.status,
       uiLibraryIds: project.uiLibraryIds.map(lib => (typeof lib === 'string' ? lib : lib._id)),
+      repositoryId: project.repositoryId ? (typeof project.repositoryId === 'string' ? project.repositoryId : project.repositoryId._id) : undefined,
       prdText: project.prdText || '',
       expectedCases: project.expectedCases || [],
       casesGeneratedFrom: project.casesGeneratedFrom,
@@ -347,12 +390,14 @@ async function loadUILibraries() {
   }
 }
 
-function toggleUILibrary(id: string) {
-  const index = form.value.uiLibraryIds?.indexOf(id);
-  if (index !== undefined && index > -1) {
-    form.value.uiLibraryIds?.splice(index, 1);
-  } else {
-    form.value.uiLibraryIds?.push(id);
+async function loadRepositories() {
+  loadingRepos.value = true;
+  try {
+    availableRepositories.value = await getAllRepositories();
+  } catch (err) {
+    console.error('Failed to load repositories:', err);
+  } finally {
+    loadingRepos.value = false;
   }
 }
 
@@ -379,10 +424,11 @@ async function handleSubmit() {
         description: form.value.description || undefined,
         status: form.value.status as FeatureStatus,
         uiLibraryIds: form.value.uiLibraryIds as string[],
+        repositoryId: form.value.repositoryId || undefined,
         prdText: form.value.prdText || undefined,
         expectedCases: validCases,
         casesGeneratedFrom: generateCasesFromPrd.value && form.value.prdText ? 'prd' : form.value.casesGeneratedFrom,
-      });
+      } as any);
 
       success.value = 'Changes saved successfully';
       setTimeout(() => { success.value = ''; }, 3000);
@@ -393,9 +439,10 @@ async function handleSubmit() {
         description: form.value.description,
         status: form.value.status as FeatureStatus,
         uiLibraryIds: form.value.uiLibraryIds as string[],
+        repositoryId: form.value.repositoryId || undefined,
         prdText: form.value.prdText,
         casesGeneratedFrom: generateCasesFromPrd.value && form.value.prdText ? 'prd' : null,
-      });
+      } as any);
 
       if (generateCasesFromPrd.value && form.value.prdText) {
         await generateProjectCases(newProject._id, 'prd');

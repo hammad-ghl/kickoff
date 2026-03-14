@@ -10,6 +10,9 @@ import AuthCallback from '../views/AuthCallback.vue';
 import UILibrariesList from '../views/UILibrariesList.vue';
 import CreateUILibrary from '../views/CreateUILibrary.vue';
 import UILibraryDetail from '../views/UILibraryDetail.vue';
+import RepositoriesList from '../views/RepositoriesList.vue';
+import CreateRepository from '../views/CreateRepository.vue';
+import RepositoryDetail from '../views/RepositoryDetail.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -63,6 +66,21 @@ const router = createRouter({
       path: '/auth/callback',
       name: 'auth-callback',
       component: AuthCallback,
+    },
+    {
+      path: '/repositories',
+      name: 'repositories',
+      component: RepositoriesList,
+    },
+    {
+      path: '/repositories/new',
+      name: 'create-repository',
+      component: CreateRepository,
+    },
+    {
+      path: '/repositories/:id',
+      name: 'repository-detail',
+      component: RepositoryDetail,
     },
     // Redirect old routes to new routes
     {

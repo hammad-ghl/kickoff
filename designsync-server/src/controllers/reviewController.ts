@@ -2,11 +2,14 @@ import { Request, Response } from 'express';
 import Review from '../models/Review';
 import Project from '../models/Project';
 import UILibrary from '../models/UILibrary';
+import Repository from '../models/Repository';
 import { 
   generateCasesFromImage, 
   checkCaseCoverage, 
   analyzeComponents 
 } from '../services/geminiAnalyzer';
+import { analyzeImpact } from '../services/featureClusterSummarizer';
+import { searchSimilarFeatures, isQdrantAvailable } from '../services/qdrantService';
 import type { IComponentDef } from '../models/UILibrary';
 import type { IComponentCheck } from '../models/Review';
 
@@ -69,7 +72,38 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     await review.save();
+    
+    // Respond immediately with the created review
     res.status(201).json(review);
+    
+    // Start analysis in background
+    // Determine initial phase based on whether project has expected cases
+    const hasExpectedCases = project.expectedCases && project.expectedCases.length > 0;
+    
+    review.analysisPhase = hasExpectedCases ? 'checking_cases' : 'generating_cases';
+    
+    if (hasExpectedCases) {
+      review.caseChecks = project.expectedCases.map(c => ({
+        caseName: c.name,
+        status: 'pending' as const,
+      }));
+    }
+    
+    await review.save();
+    
+    // Run the analysis in the background
+    runPhasedAnalysis(
+      review._id.toString(),
+      review.designImages,
+      project._id.toString(),
+      review.title
+    ).catch(err => {
+      console.error('[Review Analysis] Background analysis failed:', err);
+      Review.findByIdAndUpdate(review._id, {
+        analysisPhase: 'failed',
+        analysisError: err.message || 'Analysis failed unexpectedly',
+      }).catch(console.error);
+    });
   } catch (error) {
     console.error('Create review error:', error);
     res.status(500).json({ error: 'Failed to create review' });
@@ -80,11 +114,17 @@ export const getReview = async (req: Request, res: Response) => {
   try {
     const review = await Review.findById(req.params.id).populate({
       path: 'projectId',
-      select: 'name expectedCases uiLibraryIds',
-      populate: {
-        path: 'uiLibraryIds',
-        select: 'name components',
-      },
+      select: 'name expectedCases uiLibraryIds repositoryId prdText',
+      populate: [
+        {
+          path: 'uiLibraryIds',
+          select: 'name components',
+        },
+        {
+          path: 'repositoryId',
+          select: 'name status featureCount',
+        },
+      ],
     });
 
     if (!review) {
@@ -336,6 +376,12 @@ async function runPhasedAnalysis(
 
     await Review.findByIdAndUpdate(reviewId, {
       componentChecks: componentResult.componentChecks,
+      analysisPhase: 'impact_analysis',
+    });
+
+    await runImpactAnalysis(reviewId, projectId);
+
+    await Review.findByIdAndUpdate(reviewId, {
       analysisPhase: 'completed',
     });
 
@@ -344,6 +390,163 @@ async function runPhasedAnalysis(
     await Review.findByIdAndUpdate(reviewId, {
       analysisPhase: 'failed',
       analysisError: error.message || 'Analysis failed',
+    });
+  }
+}
+
+async function runImpactAnalysis(reviewId: string, projectId: string): Promise<void> {
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      console.log(`[Impact Analysis] Project not found: ${projectId}`);
+      return;
+    }
+
+    if (!project.repositoryId) {
+      console.log(`[Impact Analysis] No repository connected for project: ${projectId}`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: '',
+          gapsCount: 0,
+          ranAt: new Date(),
+          skipped: true,
+          skipReason: 'No repository connected',
+        },
+      });
+      return;
+    }
+
+    const repository = await Repository.findById(project.repositoryId);
+    if (!repository) {
+      console.log(`[Impact Analysis] Repository not found: ${project.repositoryId}`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: '',
+          gapsCount: 0,
+          ranAt: new Date(),
+          skipped: true,
+          skipReason: 'Repository not found',
+        },
+      });
+      return;
+    }
+
+    if (repository.status !== 'indexed') {
+      console.log(`[Impact Analysis] Repository not indexed: ${repository.status}`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: '',
+          gapsCount: 0,
+          ranAt: new Date(),
+          repositoryId: repository._id.toString(),
+          skipped: true,
+          skipReason: `Repository is ${repository.status}`,
+        },
+      });
+      return;
+    }
+
+    if (!project.prdText) {
+      console.log(`[Impact Analysis] No PRD text for project: ${projectId}`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: '',
+          gapsCount: 0,
+          ranAt: new Date(),
+          repositoryId: repository._id.toString(),
+          skipped: true,
+          skipReason: 'No PRD text available',
+        },
+      });
+      return;
+    }
+
+    if (!isQdrantAvailable()) {
+      console.log(`[Impact Analysis] Qdrant not available`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: '',
+          gapsCount: 0,
+          ranAt: new Date(),
+          repositoryId: repository._id.toString(),
+          skipped: true,
+          skipReason: 'Vector search not available',
+        },
+      });
+      return;
+    }
+
+    console.log(`[Impact Analysis] Searching for related features in ${repository.name}`);
+    
+    const searchResults = await searchSimilarFeatures(
+      repository._id.toString(),
+      project.prdText,
+      6
+    );
+
+    if (searchResults.length === 0) {
+      console.log(`[Impact Analysis] No related features found`);
+      await Review.findByIdAndUpdate(reviewId, {
+        impactAnalysis: {
+          relatedFeatures: [],
+          summary: 'No closely related features found in the codebase.',
+          gapsCount: 0,
+          ranAt: new Date(),
+          repositoryId: repository._id.toString(),
+          skipped: false,
+        },
+      });
+      return;
+    }
+
+    console.log(`[Impact Analysis] Found ${searchResults.length} related features, analyzing gaps`);
+
+    const relatedFeatures = searchResults.map(r => ({
+      featureName: r.featureName,
+      summary: r.summary,
+      userFlows: r.userFlows,
+      constraints: r.constraints,
+      dependencies: r.dependencies,
+      affectedBy: r.affectedBy,
+      filePaths: r.filePaths,
+      relevanceScore: r.score,
+    }));
+
+    const impactResult = await analyzeImpact({
+      prdText: project.prdText,
+      relatedFeatures,
+      projectName: project.name,
+    });
+
+    await Review.findByIdAndUpdate(reviewId, {
+      impactAnalysis: {
+        relatedFeatures: impactResult.relatedFeatures,
+        summary: impactResult.summary,
+        gapsCount: impactResult.gapsCount,
+        ranAt: new Date(),
+        repositoryId: repository._id.toString(),
+        skipped: false,
+      },
+    });
+
+    console.log(`[Impact Analysis] Complete - found ${impactResult.gapsCount} gaps`);
+
+  } catch (error) {
+    console.error('[Impact Analysis] Error:', error);
+    await Review.findByIdAndUpdate(reviewId, {
+      impactAnalysis: {
+        relatedFeatures: [],
+        summary: 'Impact analysis failed',
+        gapsCount: 0,
+        ranAt: new Date(),
+        skipped: true,
+        skipReason: error instanceof Error ? error.message : 'Unknown error',
+      },
     });
   }
 }

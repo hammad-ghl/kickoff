@@ -101,7 +101,7 @@ export const getAllProjects = async (req: Request, res: Response): Promise<void>
 export const updateProject = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, description, uiLibraryIds, prdText, expectedCases, casesGeneratedFrom, status } = req.body;
+    const { name, description, uiLibraryIds, repositoryId, prdText, expectedCases, casesGeneratedFrom, status } = req.body;
 
     const project = await Project.findById(id);
 
@@ -113,6 +113,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
     if (name) project.name = name;
     if (description !== undefined) project.description = description;
     if (uiLibraryIds !== undefined) project.uiLibraryIds = uiLibraryIds;
+    if (repositoryId !== undefined) project.repositoryId = repositoryId || undefined;
     if (prdText !== undefined) project.prdText = prdText;
     if (expectedCases !== undefined) project.expectedCases = expectedCases;
     if (casesGeneratedFrom !== undefined) project.casesGeneratedFrom = casesGeneratedFrom;
