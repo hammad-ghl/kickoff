@@ -43,43 +43,102 @@
 
       <!-- Analysis Progress Tracker -->
       <div class="flex-shrink-0 px-6 py-6 border-b border-border bg-tertiary">
-        <div class="max-w-4xl mx-auto">
-          <div class="relative flex items-center justify-between">
-            <!-- Progress Line -->
-            <div class="absolute top-5 left-0 right-0 h-0.5 bg-border z-0">
-              <div 
-                class="h-full bg-brand-primary transition-all duration-500"
-                :style="{ width: progressPercentage + '%' }"
-              ></div>
-            </div>
-            
-            <!-- Phase Steps -->
+        <div class="max-w-5xl mx-auto">
+          <div class="grid grid-cols-5 gap-3">
             <div 
               v-for="(phase, index) in ANALYSIS_PHASES_DISPLAY"
               :key="phase.key"
-              class="flex flex-col items-center relative z-10"
-              :class="{ 'flex-1': index !== ANALYSIS_PHASES_DISPLAY.length - 1 }"
+              class="relative"
             >
+              <!-- Progress Card -->
               <div 
-                class="w-10 h-10 rounded-full flex items-center justify-center mb-3 border-2 transition-all duration-300"
-                :class="getModernPhaseIconClass(phase.key)"
+                class="card p-4 transition-all duration-300 relative overflow-hidden min-w-[180px]"
+                :class="{
+                  'bg-brand-primary/10 border-brand-primary': isPhaseActive(phase.key),
+                  'bg-green-900/10 border-green-600': isPhaseCompleted(phase.key) && review.analysisPhase === 'completed',
+                  'opacity-50': !isPhaseActive(phase.key) && !isPhaseCompleted(phase.key)
+                }"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path :d="getPhaseIconPath(phase.key)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                </svg>
+                <!-- Active indicator with animation -->
+                <div 
+                  v-if="isPhaseActive(phase.key)"
+                  class="absolute top-0 left-0 right-0 h-1 bg-brand-primary overflow-hidden"
+                >
+                  <div class="h-full bg-white/60 animate-progress-bar"></div>
+                </div>
+                
+                <!-- Pulsing background for active phase -->
+                <div 
+                  v-if="isPhaseActive(phase.key)"
+                  class="absolute inset-0 bg-brand-primary/5 animate-pulse-slow"
+                ></div>
+                
+                <div class="flex items-start gap-3 relative z-10">
+                  <!-- Icon -->
+                  <div 
+                    class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 relative"
+                    :class="getModernPhaseIconClass(phase.key)"
+                  >
+                    <!-- Spinning loader for active phase - perfectly circular -->
+                    <div 
+                      v-if="isPhaseActive(phase.key)"
+                      class="absolute inset-0 rounded-full"
+                    >
+                      <svg class="w-full h-full animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle 
+                          cx="12" 
+                          cy="12" 
+                          r="10" 
+                          stroke="currentColor" 
+                          stroke-width="2" 
+                          stroke-dasharray="60" 
+                          stroke-dashoffset="15"
+                          stroke-linecap="round"
+                          class="opacity-60"
+                        />
+                      </svg>
+                    </div>
+                    <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path :d="getPhaseIconPath(phase.key)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                    </svg>
+                  </div>
+                  
+                  <!-- Content -->
+                  <div class="flex-1 min-w-0">
+                    <h4 
+                      class="text-[13px] font-semibold mb-1 transition-colors duration-300"
+                      :class="getPhaseTextClass(phase.key)"
+                    >
+                      {{ phase.label }}
+                    </h4>
+                    <p class="text-[10px] text-tertiary leading-relaxed">
+                      {{ phase.description }}
+                    </p>
+                    <!-- Active status text -->
+                    <p 
+                      v-if="isPhaseActive(phase.key) && review.analysisPhase !== 'completed' && review.analysisPhase !== 'failed'"
+                      class="text-[10px] text-brand-primary font-medium mt-1.5 animate-pulse"
+                    >
+                      Processing...
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Status indicator -->
+                <div 
+                  v-if="isPhaseCompleted(phase.key) && review.analysisPhase === 'completed'"
+                  class="absolute top-3 right-3"
+                >
+                  <CheckCircle :size="14" class="text-green-500" />
+                </div>
               </div>
-              <span 
-                class="text-[11px] font-medium text-center max-w-[80px] transition-colors duration-300"
-                :class="getPhaseTextClass(phase.key)"
-              >
-                {{ phase.label }}
-              </span>
-              <span 
-                v-if="isPhaseActive(phase.key)"
-                class="text-[10px] text-brand-primary font-medium mt-1"
-              >
-                In Progress...
-              </span>
+              
+              <!-- Connector Line -->
+              <div 
+                v-if="index < ANALYSIS_PHASES_DISPLAY.length - 1"
+                class="absolute top-8 -right-2 w-4 h-0.5 bg-border z-0"
+                :class="{ 'bg-brand-primary': isPhaseCompleted(phase.key) }"
+              ></div>
             </div>
           </div>
         </div>
@@ -96,7 +155,7 @@
       <!-- Main 3-Pane Layout -->
       <div class="flex-1 flex min-h-0">
         <!-- Left Pane: Case Coverage -->
-        <div class="w-1/3 flex flex-col border-r border-border-light bg-tertiary">
+        <div class="w-1/3 flex flex-col border-r border-border-light bg-tertiary  h-[calc(100vh-210px)]">
           <div class="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
             <h3 class="text-[14px] font-medium text-primary">Case Coverage ({{ filteredCaseChecks.length }})</h3>
             <div class="w-36">
@@ -111,15 +170,15 @@
             No test cases generated yet.
             <span v-if="isPhaseActive('generating_cases')"> Generating cases...</span>
           </div>
-          <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low">
+          <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low pb-[200px]">
             <div 
               v-for="c in filteredCaseChecks"
               :key="c.caseName"
               class="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-hover transition-colors"
               :class="getCheckBgClass(c.status)"
             >
-              <div class="w-5 h-5 flex-shrink-0" :class="getCheckIconClass(c.status)">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" v-html="getCheckIcon(c.status)"></svg>
+              <div class="w-5 h-5 flex-shrink-0">
+                <component :is="getCaseStatusIcon(c.status)" class="w-5 h-5" />
               </div>
               <span class="text-sm text-primary flex-1">{{ c.caseName }}</span>
             </div>
@@ -146,44 +205,42 @@
               </button>
             </div>
           </div>
-          <div v-if="!review.designImage" class="p-8 text-center text-secondary text-sm">
+          <div v-if="!review.designImages || review.designImages.length === 0" class="p-8 text-center text-secondary text-sm">
             No design image uploaded for this review.
           </div>
           <div v-else class="flex-1 overflow-y-auto p-4 flex items-start justify-center relative">
-            <img 
-              :src="review.designImage"
-              alt="Design Screenshot"
-              class="max-w-full h-auto object-contain rounded-lg shadow-lg"
-              @load="onImageLoad"
-              ref="designImageRef"
-            />
-            <div v-if="showBoundingBoxes && imageDimensions.width && imageDimensions.height" class="absolute top-4 left-4 right-4 bottom-4 pointer-events-none">
-              <template v-for="(comp, index) in filteredComponentChecks" :key="index">
-                <div 
-                  v-if="comp.boundingBox"
-                  class="absolute border-2 border-dashed transition-all duration-300"
-                  :class="getBoundingBoxClass(comp.hasIssue)"
-                  :style="{
-                    left: `${comp.boundingBox.x * 100}%`,
-                    top: `${comp.boundingBox.y * 100}%`,
-                    width: `${comp.boundingBox.width * 100}%`,
-                    height: `${comp.boundingBox.height * 100}%`,
-                  }"
-                >
-                  <span 
-                    class="absolute -top-5 left-0 px-1 text-xs font-mono rounded-sm whitespace-nowrap"
-                    :class="getBoundingBoxLabelClass(comp.hasIssue)"
+            <div class="relative cursor-pointer inline-block" @click="expandedImage = true">
+              <img 
+                :src="review.designImages[0]"
+                alt="Design Screenshot"
+                class="max-w-full h-auto object-contain rounded-lg shadow-lg block"
+                @load="onImageLoad"
+                ref="designImageRef"
+              />
+              <div v-if="showBoundingBoxes && renderedDimensions.width && renderedDimensions.height" class="absolute inset-0 pointer-events-none">
+                <template v-for="(comp, index) in visibleComponentBoxes" :key="index">
+                  <div 
+                    v-if="comp.boundingBox"
+                    class="absolute border-2 border-dashed transition-all duration-300 pointer-events-auto"
+                    :class="getBoundingBoxClass(comp.hasIssue)"
+                    :style="getBoundingBoxStyle(comp.boundingBox)"
+                    :title="`${comp.componentName} - x:${(comp.boundingBox.x * 100).toFixed(1)}% y:${(comp.boundingBox.y * 100).toFixed(1)}% w:${(comp.boundingBox.width * 100).toFixed(1)}% h:${(comp.boundingBox.height * 100).toFixed(1)}%`"
                   >
-                    {{ comp.componentName }}
-                  </span>
-                </div>
-              </template>
+                    <span 
+                      class="absolute -top-5 left-0 px-1 text-[10px] font-mono rounded-sm whitespace-nowrap pointer-events-none"
+                      :class="getBoundingBoxLabelClass(comp.hasIssue)"
+                    >
+                      {{ comp.componentName }}
+                    </span>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Right Pane: Component Checks -->
-        <div class="w-1/3 flex flex-col bg-tertiary">
+        <div class="w-1/3 flex flex-col bg-tertiary h-[calc(100vh-210px)] overflow-y-auto">
           <div class="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
             <h3 class="text-[14px] font-medium text-primary">Components ({{ filteredComponentChecks.length }})</h3>
             <div class="w-36">
@@ -194,22 +251,42 @@
               />
             </div>
           </div>
+          <!-- Helper text -->
+          <div v-if="selectedComponent" class="px-4 py-2 bg-brand-primary/10 border-b border-brand-primary/30 text-[11px] text-brand-primary flex items-center justify-between">
+            <span>Showing only selected component's marking</span>
+            <button 
+              @click="selectedComponent = null" 
+              class="text-[10px] underline hover:no-underline"
+            >
+              Clear selection
+            </button>
+          </div>
           <div v-if="!review.componentChecks || review.componentChecks.length === 0" class="p-4 text-secondary text-sm">
             No components mapped yet.
             <span v-if="isPhaseActive('mapping_components')"> Mapping components...</span>
           </div>
-          <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low">
+          <div v-else class="flex-1 overflow-y-auto divide-y divide-border-low pb-[200px]">
             <div 
               v-for="comp in filteredComponentChecks"
               :key="comp.componentName"
               class="px-4 py-3 cursor-pointer hover:bg-hover transition-colors"
               :class="getComponentBgClass(comp)"
+              @click="handleComponentClick(comp.componentName)"
             >
               <div class="flex items-center gap-3">
-                <div class="w-5 h-5 flex-shrink-0" :class="getComponentIconClass(comp)">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" v-html="getComponentIcon(comp)"></svg>
+                <div class="w-5 h-5 flex-shrink-0">
+                  <component :is="getComponentStatusIcon(comp)" class="w-5 h-5" />
                 </div>
-                <span class="text-sm text-primary font-medium flex-1">{{ comp.componentName }}</span>
+                <span class="text-sm font-medium flex-1" :class="selectedComponent === comp.componentName ? 'text-brand-primary' : 'text-primary'">
+                  {{ comp.componentName }}
+                </span>
+                <!-- Selected indicator -->
+                <span 
+                  v-if="selectedComponent === comp.componentName"
+                  class="chip bg-brand-primary/20 text-brand-primary border border-brand-primary text-[10px] font-semibold"
+                >
+                  Selected
+                </span>
                 <span 
                   v-if="comp.propsMissing?.length || comp.slotsMissing?.length"
                   class="chip chip-orange text-[10px]"
@@ -305,6 +382,43 @@
           Are you sure you want to delete <strong class="text-primary">"{{ review?.title }}"</strong>?
         </p>
       </Modal>
+
+      <!-- Expanded Image Modal -->
+      <Modal
+        v-model="expandedImage"
+        title="Design Image"
+        :show-footer="false"
+        size="large"
+      >
+        <div class="relative max-h-[80vh] overflow-auto bg-black/20 rounded-lg p-4 flex items-center justify-center">
+          <div class="relative inline-block">
+            <img 
+              v-if="review?.designImages?.[0]"
+              :src="review.designImages[0]"
+              alt="Design Screenshot"
+              class="w-auto h-auto max-w-full max-h-[75vh] rounded-lg block"
+            />
+            <div v-if="showBoundingBoxes && renderedDimensions.width && renderedDimensions.height" class="absolute inset-0 pointer-events-none">
+              <template v-for="(comp, index) in visibleComponentBoxes" :key="index">
+                <div 
+                  v-if="comp.boundingBox"
+                  class="absolute border-2 border-dashed transition-all duration-300"
+                  :class="getBoundingBoxClass(comp.hasIssue)"
+                  :style="getBoundingBoxStyle(comp.boundingBox)"
+                  :title="`${comp.componentName}`"
+                >
+                  <span 
+                    class="absolute -top-5 left-0 px-1 text-[10px] font-mono rounded-sm whitespace-nowrap"
+                    :class="getBoundingBoxLabelClass(comp.hasIssue)"
+                  >
+                    {{ comp.componentName }}
+                  </span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   </div>
 </template>
@@ -316,6 +430,16 @@ import { useApi, type Review, type IComponentCheck } from '../composables/useApi
 import { formatDate, getAnalysisPhaseLabel, ANALYSIS_PHASES, getAnalysisPhaseClass } from '../constants';
 import Modal from '../components/Modal.vue';
 import CustomDropdown, { type DropdownOption } from '../components/CustomDropdown.vue';
+import { 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  HelpCircle, 
+  Clock,
+  List,
+  Folder,
+  Filter
+} from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -329,63 +453,99 @@ const loading = ref(true);
 const reAnalyzing = ref(false);
 const caseFilter = ref('');
 const componentFilter = ref('');
+const selectedComponent = ref<string | null>(null);
 const showBoundingBoxes = ref(true);
 const designImageRef = ref<HTMLImageElement | null>(null);
 const imageDimensions = ref({ width: 0, height: 0 });
+const renderedDimensions = ref({ width: 0, height: 0 });
 const openAddImageModal = ref(false);
 const newDesignImage = ref('');
 const newDesignImagePreview = ref('');
 const addingDesignImage = ref(false);
 const showReanalyzeModal = ref(false);
 const showDeleteModal = ref(false);
+const expandedImage = ref(false);
 
-// Filter options with icons
-const CheckCircleIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
-]);
-
-const AlertCircleIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
-]);
-
-const XCircleIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' })
-]);
-
-const QuestionCircleIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
-]);
-
-const ClockIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
-]);
-
-const ListIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6h16M4 12h16M4 18h16' })
-]);
+// Icon components with consistent colors using Lucide
+const StatusIconCovered = () => h(CheckCircle, { class: 'text-green-500' });
+const StatusIconPartial = () => h(AlertCircle, { class: 'text-orange-500' });
+const StatusIconMissing = () => h(XCircle, { class: 'text-red-500' });
+const StatusIconUnclear = () => h(HelpCircle, { class: 'text-yellow-500' });
+const StatusIconPending = () => h(Clock, { class: 'text-blue-500' });
+const StatusIconWarning = () => h(Folder, { class: 'text-orange-500' });
+const IconList = () => h(List);
+const IconFilter = () => h(Filter);
 
 const caseFilterOptions: DropdownOption[] = [
-  { value: '', label: 'All Cases', icon: ListIcon },
-  { value: 'covered', label: 'Covered', icon: CheckCircleIcon },
-  { value: 'partial', label: 'Partial', icon: AlertCircleIcon },
-  { value: 'missing', label: 'Missing', icon: XCircleIcon },
-  { value: 'unclear', label: 'Unclear', icon: QuestionCircleIcon },
-  { value: 'pending', label: 'Pending', icon: ClockIcon },
+  { value: '', label: 'All Cases', icon: IconFilter },
+  { value: 'covered', label: 'Covered', icon: StatusIconCovered },
+  { value: 'partial', label: 'Partial', icon: StatusIconPartial },
+  { value: 'missing', label: 'Missing', icon: StatusIconMissing },
+  { value: 'unclear', label: 'Unclear', icon: StatusIconUnclear },
+  { value: 'pending', label: 'Pending', icon: StatusIconPending },
 ];
 
 const componentFilterOptions: DropdownOption[] = [
-  { value: '', label: 'All Components', icon: ListIcon },
-  { value: 'exists', label: 'Exists', icon: CheckCircleIcon },
-  { value: 'missing', label: 'Missing', icon: XCircleIcon },
-  { value: 'hasIssue', label: 'Has Issues', icon: AlertCircleIcon },
+  { value: '', label: 'All', icon: IconFilter },
+  { value: 'exists', label: 'Exists', icon: StatusIconCovered },
+  { value: 'missing', label: 'Missing', icon: StatusIconMissing },
+  { value: 'hasIssue', label: 'Has Issues', icon: StatusIconWarning },
 ];
 
+const getCaseStatusIcon = (status: string) => {
+  switch (status) {
+    case 'covered': return StatusIconCovered;
+    case 'partial': return StatusIconPartial;
+    case 'missing': return StatusIconMissing;
+    case 'unclear': return StatusIconUnclear;
+    case 'pending': return StatusIconPending;
+    default: return null;
+  }
+};
+
+const getComponentStatusIcon = (comp: IComponentCheck) => {
+  if (!comp.exists) return StatusIconMissing;
+  if (comp.hasIssue || comp.propsMissing?.length || comp.slotsMissing?.length) return StatusIconWarning;
+  return StatusIconCovered;
+};
+
+// Calculate bounding box style with pixel-perfect positioning
+const getBoundingBoxStyle = (boundingBox: { x: number; y: number; width: number; height: number }) => {
+  // Use percentage-based positioning for better scaling
+  return {
+    left: `${boundingBox.x * 100}%`,
+    top: `${boundingBox.y * 100}%`,
+    width: `${boundingBox.width * 100}%`,
+    height: `${boundingBox.height * 100}%`,
+  };
+};
+
 const ANALYSIS_PHASES_DISPLAY = [
-  { key: 'pending', label: 'Pending' },
-  { key: 'generating_cases', label: 'Generate Cases' },
-  { key: 'checking_cases', label: 'Check Coverage' },
-  { key: 'mapping_components', label: 'Map Components' },
-  { key: 'completed', label: 'Completed' },
+  { 
+    key: 'pending', 
+    label: 'Pending',
+    description: 'Review queued for analysis'
+  },
+  { 
+    key: 'generating_cases', 
+    label: 'Generate Cases',
+    description: 'Extracting test cases from design'
+  },
+  { 
+    key: 'checking_cases', 
+    label: 'Check Coverage',
+    description: 'Validating design coverage'
+  },
+  { 
+    key: 'mapping_components', 
+    label: 'Map Components',
+    description: 'Matching UI components to library'
+  },
+  { 
+    key: 'completed', 
+    label: 'Completed',
+    description: 'Analysis finished successfully'
+  },
 ];
 
 const filteredCaseChecks = computed(() => {
@@ -406,10 +566,35 @@ const filteredComponentChecks = computed(() => {
   });
 });
 
+// Bounding boxes to display - either all filtered or just the selected component
+const visibleComponentBoxes = computed(() => {
+  if (!review.value?.componentChecks) return [];
+  
+  // If a specific component is selected, show only that one
+  if (selectedComponent.value) {
+    return review.value.componentChecks.filter(c => c.componentName === selectedComponent.value);
+  }
+  
+  // Otherwise show all filtered components
+  return filteredComponentChecks.value;
+});
+
 const progressPercentage = computed(() => {
   if (!review.value) return 0;
-  const currentIndex = ANALYSIS_PHASES.findIndex(p => p.key === review.value?.analysisPhase);
-  const totalPhases = ANALYSIS_PHASES_DISPLAY.length - 1;
+  const currentPhase = review.value.analysisPhase;
+  
+  // Find current phase index
+  const currentIndex = ANALYSIS_PHASES_DISPLAY.findIndex(p => p.key === currentPhase);
+  
+  if (currentIndex === -1) return 0;
+  
+  // If completed or failed, show 100%
+  if (currentPhase === 'completed' || currentPhase === 'failed') {
+    return 100;
+  }
+  
+  // Calculate percentage based on current phase
+  const totalPhases = ANALYSIS_PHASES_DISPLAY.length;
   return ((currentIndex + 1) / totalPhases) * 100;
 });
 
@@ -426,13 +611,25 @@ const getPhaseIconPath = (phase: string) => {
 };
 
 const getModernPhaseIconClass = (phase: string) => {
-  if (isPhaseCompleted(phase)) {
-    return 'bg-brand-primary border-brand-primary text-white';
-  } else if (isPhaseActive(phase)) {
-    return 'bg-brand-primary/20 border-brand-primary text-brand-primary animate-pulse';
-  } else {
-    return 'bg-tertiary border-border text-secondary';
+  const currentPhase = review.value?.analysisPhase;
+  
+  if (currentPhase === 'completed' && phase === 'completed') {
+    return 'bg-green-600 text-white';
   }
+  
+  if (currentPhase === 'failed' && phase === 'failed') {
+    return 'bg-red-600 text-white';
+  }
+  
+  if (isPhaseCompleted(phase)) {
+    return 'bg-brand-primary/20 text-brand-primary';
+  }
+  
+  if (isPhaseActive(phase)) {
+    return 'bg-brand-primary text-white';
+  }
+  
+  return 'bg-tertiary text-secondary';
 };
 
 const getPhaseTextClass = (phase: string) => {
@@ -444,6 +641,10 @@ const getPhaseTextClass = (phase: string) => {
 
 const isPhaseActive = (phaseKey: string) => {
   if (!review.value) return false;
+  // If analysis is completed or failed, no phase should be active
+  if (review.value.analysisPhase === 'completed' || review.value.analysisPhase === 'failed') {
+    return false;
+  }
   const currentPhaseIndex = ANALYSIS_PHASES.findIndex(p => p.key === review.value?.analysisPhase);
   const phaseIndex = ANALYSIS_PHASES.findIndex(p => p.key === phaseKey);
   return phaseIndex === currentPhaseIndex;
@@ -451,31 +652,17 @@ const isPhaseActive = (phaseKey: string) => {
 
 const isPhaseCompleted = (phaseKey: string) => {
   if (!review.value) return false;
-  const currentPhaseIndex = ANALYSIS_PHASES.findIndex(p => p.key === review.value?.analysisPhase);
-  const phaseIndex = ANALYSIS_PHASES.findIndex(p => p.key === phaseKey);
-  return phaseIndex < currentPhaseIndex || review.value?.analysisPhase === 'completed';
-};
-
-const getCheckIcon = (status: string) => {
-  switch (status) {
-    case 'covered': return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-    case 'partial': return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-    case 'missing': return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-    case 'unclear': return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9.971L11.636 13.379m0 0l-3.35 3.353M12 21.603V12m0 0L7.493 8.358M12 12l3.35-3.35M12 12l3.35 3.35M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-    case 'pending': return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-    default: return '';
+  const currentPhase = review.value.analysisPhase;
+  
+  // If current phase is completed or failed, all phases before it are completed
+  if (currentPhase === 'completed' || currentPhase === 'failed') {
+    return true;
   }
-};
-
-const getCheckIconClass = (status: string) => {
-  switch (status) {
-    case 'covered': return 'text-green-500';
-    case 'partial': return 'text-orange-500';
-    case 'missing': return 'text-red-500';
-    case 'unclear': return 'text-yellow-500';
-    case 'pending': return 'text-blue-500';
-    default: return 'text-secondary';
-  }
+  
+  const currentPhaseIndex = ANALYSIS_PHASES_DISPLAY.findIndex(p => p.key === currentPhase);
+  const phaseIndex = ANALYSIS_PHASES_DISPLAY.findIndex(p => p.key === phaseKey);
+  
+  return phaseIndex < currentPhaseIndex;
 };
 
 const getCheckBgClass = (status: string) => {
@@ -497,22 +684,29 @@ const getBoundingBoxLabelClass = (hasIssue: boolean) => {
   return hasIssue ? 'bg-red-500 text-white' : 'bg-brand-primary text-primary-contrast';
 };
 
-const getComponentIcon = (comp: IComponentCheck) => {
-  if (!comp.exists) return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />`; // Missing
-  if (comp.hasIssue || comp.propsMissing?.length || comp.slotsMissing?.length) return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856a2 2 0 001.995-1.858L21 7H3m2 0V4a1 1 0 011-1h4a1 1 0 011 1v3m0 0h1l1-1h2l1 1h1M7 7h10" />`; // Warning
-  return `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />`; // OK
-};
-
-const getComponentIconClass = (comp: IComponentCheck) => {
-  if (!comp.exists) return 'text-red-500';
-  if (comp.hasIssue || comp.propsMissing?.length || comp.slotsMissing?.length) return 'text-orange-500';
-  return 'text-green-500';
-};
-
 const getComponentBgClass = (comp: IComponentCheck) => {
-  if (!comp.exists) return 'hover:bg-red-900/20';
-  if (comp.hasIssue || comp.propsMissing?.length || comp.slotsMissing?.length) return 'hover:bg-orange-900/20';
-  return 'hover:bg-green-900/20';
+  const baseClasses = [];
+  
+  // Selection state - make it very prominent
+  if (selectedComponent.value === comp.componentName) {
+    baseClasses.push('!bg-brand-primary/30 border-l-4 border-brand-primary shadow-inner');
+  } else {
+    // Status-based hover colors (only when not selected)
+    if (!comp.exists) baseClasses.push('hover:bg-red-900/20');
+    else if (comp.hasIssue || comp.propsMissing?.length || comp.slotsMissing?.length) baseClasses.push('hover:bg-orange-900/20');
+    else baseClasses.push('hover:bg-green-900/20');
+  }
+  
+  return baseClasses.join(' ');
+};
+
+const handleComponentClick = (componentName: string) => {
+  // Toggle selection: if already selected, deselect; otherwise select
+  if (selectedComponent.value === componentName) {
+    selectedComponent.value = null;
+  } else {
+    selectedComponent.value = componentName;
+  }
 };
 
 watch(() => review.value?.analysisPhase, (newPhase, oldPhase) => {
@@ -533,7 +727,7 @@ const startPolling = () => {
   if (pollInterval) return;
   pollInterval = setInterval(async () => {
     if (review.value && ['generating_cases', 'checking_cases', 'mapping_components'].includes(review.value.analysisPhase)) {
-      await loadReview();
+      await refreshReview();
     } else {
       stopPolling();
     }
@@ -568,6 +762,19 @@ async function loadReview() {
   }
 }
 
+async function refreshReview() {
+  // Silent refresh for polling - no loading state
+  try {
+    const fetchedReview = await getReview(reviewId);
+    review.value = fetchedReview;
+    if (!review.value.analysisError) {
+      review.value.analysisError = undefined;
+    }
+  } catch (err) {
+    console.error('Failed to refresh review:', err);
+  }
+}
+
 async function confirmReanalyze() {
   if (!review.value) return;
   showReanalyzeModal.value = false;
@@ -575,6 +782,8 @@ async function confirmReanalyze() {
   try {
     const updatedReview = await reAnalyzeReview(reviewId);
     review.value = updatedReview;
+    // Start polling to track analysis progress
+    startPolling();
   } catch (err) {
     console.error('Failed to re-analyze review:', err);
     alert((err as Error).message || 'Failed to re-analyze review');
@@ -597,8 +806,8 @@ async function confirmDelete() {
 }
 
 function goBack() {
-  if (projectId.value) {
-    router.push(`/features/${projectId.value}`);
+  if (projectId.value?._id) {
+    router.push(`/features/${projectId.value?._id}`);
   } else {
     router.push('/features');
   }
@@ -608,6 +817,9 @@ function onImageLoad() {
   if (designImageRef.value) {
     imageDimensions.value.width = designImageRef.value.naturalWidth;
     imageDimensions.value.height = designImageRef.value.naturalHeight;
+    // Get the actual rendered dimensions
+    renderedDimensions.value.width = designImageRef.value.width;
+    renderedDimensions.value.height = designImageRef.value.height;
   }
 }
 
@@ -648,3 +860,31 @@ async function submitNewDesignImage() {
   }
 }
 </script>
+
+<style scoped>
+@keyframes progress-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-progress-bar {
+  animation: progress-bar 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

@@ -250,9 +250,12 @@ export function useApi() {
   }
 
   async function createReview(projectId: string, data: { designImages: string[]; title: string }): Promise<Review> {
-    return apiFetch(`/projects/${projectId}/reviews`, {
+    return apiFetch(`/reviews`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        projectId,
+      }),
     });
   }
 

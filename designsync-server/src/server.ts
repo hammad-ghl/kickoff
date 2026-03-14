@@ -15,6 +15,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/design
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   process.env.CORS_ORIGIN,
 ].filter(Boolean) as string[];
 

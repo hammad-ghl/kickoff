@@ -1,6 +1,7 @@
+import type { ICaseCheck, IComponentCheck } from '../models/Review';
+
 import { GoogleGenAI } from '@google/genai';
 import type { IComponentDef } from '../models/UILibrary';
-import type { IComponentCheck, ICaseCheck } from '../models/Review';
 import type { IExpectedCase } from '../models/Project';
 
 const MODEL = 'gemini-2.5-flash';
@@ -311,10 +312,13 @@ ${input.projectName ? `**Project/Feature Name:** ${input.projectName}` : ''}
    - **CRITICAL: Provide a bounding box** for ONE representative instance of this component in the image
 
 **Bounding Box Format:**
-- x: horizontal position from left edge as decimal (0.0 = left edge, 1.0 = right edge)
-- y: vertical position from top edge as decimal (0.0 = top edge, 1.0 = bottom edge)
-- width: width as decimal fraction of image width
-- height: height as decimal fraction of image height
+- x: horizontal position of LEFT edge from image left as decimal (0.0 = left edge, 1.0 = right edge)
+- y: vertical position of TOP edge from image top as decimal (0.0 = top edge, 1.0 = bottom edge)  
+- width: component width as decimal fraction of total image width (e.g., 0.2 = 20% of image width)
+- height: component height as decimal fraction of total image height (e.g., 0.05 = 5% of image height)
+- **IMPORTANT**: Measure bounding boxes PRECISELY - they should tightly fit around the component with minimal padding
+- Example: A button at top-left corner 100px from left, 50px from top, 120px wide, 40px tall in a 1000x800px image would be:
+  { "x": 0.1, "y": 0.0625, "width": 0.12, "height": 0.05 }
 
 **Output format:** Reply with a single JSON object only, no markdown or extra text:
 {

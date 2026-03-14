@@ -2,7 +2,11 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="modelValue" class="modal-overlay" @click="handleOverlayClick">
-        <div class="modal-container" @click.stop>
+        <div 
+          class="modal-container" 
+          :class="{ 'modal-container-large': size === 'large' }"
+          @click.stop
+        >
           <div class="modal-header" v-if="title">
             <h3 class="modal-title">{{ title }}</h3>
             <button @click="close" class="modal-close">
@@ -36,6 +40,7 @@ const props = defineProps<{
   confirmButtonClass?: string;
   showFooter?: boolean;
   closeOnOverlay?: boolean;
+  size?: 'default' | 'large';
 }>();
 
 const emit = defineEmits(['update:modelValue', 'confirm', 'close']);
@@ -96,6 +101,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-container-large {
+  max-width: 1200px;
 }
 
 .modal-header {

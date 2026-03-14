@@ -213,22 +213,35 @@
                 <div class="text-[13px] text-secondary">
                   <span class="text-brand-primary font-medium">Click to upload</span> or drag and drop
                 </div>
-                <div class="text-[11px] text-tertiary">PNG, JPG, WebP (max. 10MB)</div>
+                <div class="text-[11px] text-tertiary">PNG, JPG, WebP (max. 10MB each) - Multiple files supported</div>
               </div>
               
-              <div v-else class="flex flex-col items-center gap-3 w-full">
-                <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black/20 border border-border-low">
-                  <img :src="newReviewForm.designImage" class="w-full h-full object-contain" />
-                  <div class="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button @click.stop="newReviewForm.designImage = ''; newReviewForm.designImagePreview = ''" class="btn-icon bg-error/20 text-error hover:bg-error/40">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+              <div v-else class="flex flex-col gap-2">
+                <div class="text-[11px] text-secondary mb-1">
+                  {{ newReviewForm.designImages.length }} image(s) selected - Click to add more
                 </div>
-                <div class="text-[12px] text-secondary truncate max-w-full px-2">
-                  {{ newReviewForm.designImagePreview }}
+                <div class="grid grid-cols-2 gap-2">
+                  <div 
+                    v-for="(image, index) in newReviewForm.designImages" 
+                    :key="index"
+                    class="relative aspect-video rounded-lg overflow-hidden bg-black/20 border border-border-low group"
+                  >
+                    <img :src="image" class="w-full h-full object-cover" />
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        @click.stop="removeImage(index)" 
+                        class="btn-icon bg-error/20 text-error hover:bg-error/40"
+                        title="Remove image"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1">
+                      <div class="text-[10px] text-white truncate">{{ newReviewForm.designImagePreviews[index] }}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -244,7 +257,7 @@
           </button>
           <button
             @click="handleStartReview"
-            :disabled="!newReviewForm.title || !newReviewForm.designImage || creatingReview"
+            :disabled="!newReviewForm.title || newReviewForm.designImages.length === 0 || creatingReview"
             class="btn-primary"
           >
             {{ creatingReview ? 'Starting...' : 'Start Review' }}
@@ -358,6 +371,11 @@ async function handleDesignImageUpload(event: Event) {
 function removeImage(index: number) {
   newReviewForm.value.designImages.splice(index, 1);
   newReviewForm.value.designImagePreviews.splice(index, 1);
+}
+
+function clearImages() {
+  newReviewForm.value.designImages = [];
+  newReviewForm.value.designImagePreviews = [];
 }
 
 function handleDrop(event: DragEvent) {

@@ -166,6 +166,61 @@ export const getAllReviews = async (req: Request, res: Response) => {
   }
 };
 
+export const reAnalyzeReview = async (req: Request, res: Response) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    const project = await Project.findById(review.projectId).populate('uiLibraryIds');
+    if (!project) {
+      return res.status(400).json({ error: 'Project not found' });
+    }
+
+    if (!review.designImages || review.designImages.length === 0) {
+      return res.status(400).json({ error: 'Review has no design images to analyze' });
+    }
+
+    // Reset analysis state
+    const hasExpectedCases = project.expectedCases && project.expectedCases.length > 0;
+    
+    review.analysisPhase = hasExpectedCases ? 'checking_cases' : 'generating_cases';
+    review.analysisError = undefined;
+    review.componentChecks = [];
+    
+    if (hasExpectedCases) {
+      review.caseChecks = project.expectedCases.map(c => ({
+        caseName: c.name,
+        status: 'pending' as const,
+      }));
+    } else {
+      review.caseChecks = [];
+    }
+    
+    await review.save();
+
+    res.json({ 
+      message: 'Re-analysis started', 
+      reviewId: review._id,
+      analysisPhase: review.analysisPhase,
+    });
+
+    // Start analysis in the background
+    runPhasedAnalysis(
+      review._id.toString(), 
+      review.designImages, 
+      project._id.toString(),
+      review.title
+    );
+  } catch (error: any) {
+    console.error('Re-analyze review error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to start re-analysis',
+    });
+  }
+};
+
 export const analyzeReview = async (req: Request, res: Response) => {
   try {
     const review = await Review.findById(req.params.id);
